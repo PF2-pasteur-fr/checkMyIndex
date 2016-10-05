@@ -57,7 +57,7 @@ uniqueIndexes <- as.logical(opt$uniqueIndexes)
 uniqueCombinations <- as.logical(opt$uniqueCombinations)
 nbMaxTrials <- as.numeric(opt$nbMaxTrials)
 
-source("checkMyIndex/global.r")
+source("global.r")
 
 nbLanes <- nbSamples/multiplexingRate
 index <- read.table(inputFile, header=FALSE, sep="\t", stringsAsFactors=FALSE, col.names=c("id","seq"))
