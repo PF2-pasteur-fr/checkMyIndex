@@ -1,6 +1,11 @@
 # checkMyIndex
 
-Search for a set of compatible indexes for your sequencing experiment according to the number of samples and the desired multiplexing rate (i.e. number of samples per lane).
+Search for a set of compatible indexes for your sequencing experiment according to:
+
+* the number of samples
+* the desired multiplexing rate (i.e. number of samples per lane)
+* the possibility to use some indexes several times
+* the possibility to use some index combinations several times
 
 ## Input indexes file
 
@@ -8,19 +13,19 @@ The list of the available indexes must be stored in a text file containing two t
 
 ## Shiny application
 
-**Public website**
+### Public website
 
-The last version of *checkMyIndex* is available on <http://shiny01.hosting.pasteur.fr/checkMyIndex/>.
+Click [here](http://shiny01.hosting.pasteur.fr/checkMyIndex/) to use the shiny interface of *checkMyIndex*.
 
-**Locally**
+### Locally
 
-The *shiny* R package must be available to run the *checkMyIndex* interface locally, run `install.packages(shiny)` in R to install it.
+One can use the application locally running the two following lines in R:
 
-Within R, run the following commands to launch the application:
+`library(shiny)`
 
-`library(shiny)
+`runGitHub("PF2-pasteur-fr/checkMyIndex", launch.browser=TRUE)`
 
-runGitHub("PF2-pasteur-fr/checkMyIndex", launch.browser=TRUE)`
+**Note**: the *shiny* R package must be available, run `install.packages(shiny)` in R to install it.
 
 ## Rscript command line
 
@@ -28,7 +33,7 @@ runGitHub("PF2-pasteur-fr/checkMyIndex", launch.browser=TRUE)`
 
 **Note**: the *optparse* R package must be available to interpret the input parameters, run `install.packages(optparse)` in R to install it. 
 
-**Examples**:
+Here are 3 examples using the input example file `inputIndexesExample.txt`:
 
 * List of 9 indexes for 9 samples distributed on 3 lanes:
 
@@ -36,15 +41,13 @@ runGitHub("PF2-pasteur-fr/checkMyIndex", launch.browser=TRUE)`
 
 * List of 12 indexes for 12 samples distributed on 4 lanes using each lane combination only once:
 
-`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --multiplexingRate=3 --nbSamples=9 --uniqueCombination`
+`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --multiplexingRate=3 --nbSamples=12 --uniqueCombination`
 
 * List of 12 indexes for 12 samples distributed on 4 lanes using each index only once:
 
-`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --multiplexingRate=3 --nbSamples=9 --uniqueIndexes`
+`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --multiplexingRate=3 --nbSamples=12 --uniqueIndexes`
 
-**To get some help**:
-
-Run the following command line to print the help page of the script: 
+The help page of the script can be displayed running the following command: 
 
 `Rscript checkMyIndex.r --help`
 
