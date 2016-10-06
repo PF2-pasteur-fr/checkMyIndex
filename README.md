@@ -4,8 +4,7 @@ Search for a set of compatible indexes for your sequencing experiment according 
 
 * the number of samples
 * the desired multiplexing rate (i.e. number of samples per lane)
-* the possibility to use some indexes several times
-* the possibility to use some index combinations several times
+* the constraint on the indexes (none, use each one or each combination only once)
 
 ## Input indexes file
 
@@ -37,15 +36,15 @@ Here are 3 examples using the input example file `inputIndexesExample.txt`:
 
 * List of 9 indexes for 9 samples distributed on 3 lanes:
 
-`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --multiplexingRate=3 --nbSamples=9`
+`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --nbSamples=9 --multiplexingRate=3`
 
 * List of 12 indexes for 12 samples distributed on 4 lanes using each lane combination only once:
 
-`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --multiplexingRate=3 --nbSamples=12 --uniqueCombination`
+`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --nbSamples=12 --multiplexingRate=3 --unicityConstraint=lane`
 
 * List of 12 indexes for 12 samples distributed on 4 lanes using each index only once:
 
-`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --multiplexingRate=3 --nbSamples=12 --uniqueIndexes`
+`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --nbSamples=12 --multiplexingRate=3 --unicityConstraint=index`
 
 The help page of the script can be displayed running the following command: 
 

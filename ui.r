@@ -11,12 +11,9 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
       fileInput("inputFile", label="Select your tab-delimited file containing the index ids and sequences", accept="text"),
       conditionalPanel(condition="output.indexUploaded", {uiOutput("nbSamples")}),
       conditionalPanel(condition="output.indexUploaded", {uiOutput("multiplexingRate")}),
-      checkboxInput("uniqueCombinations", "Use each combination only once", value=TRUE),
-      conditionalPanel(condition="input.uniqueCombinations", {checkboxInput("uniqueIndexes", "Use each index only once", value=FALSE)}),
-      selectInput("nbMaxTrials", label="Maximum number of trials to find a solution", choices=10^(1:5), selected=10),
-      actionButton("go", label="Search for a solution"),
-      br(),br(),
-      p("Contact: "), a("hugo.varet@pasteur.fr")
+      selectInput("unicityConstraint", label="Constraint on the indexes", choices=c("None","Use each combination only once","Use each index only once"), selected="None"),
+      selectInput("nbMaxTrials", label="Maximum number of trials to find a solution", choices=10^(1:4), selected=10),
+      actionButton("go", label="Search for a solution")
     ),
     
     # output
@@ -31,7 +28,27 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                  p(textOutput("textDescribingSolution")),
                  dataTableOutput("solution"),
                  br(""),
-                 downloadButton("downloadData", "Download"))
+                 downloadButton("downloadData", "Download")),
+        
+        # 3rd panel: help
+        tabPanel("Help",
+                 
+                 h3("Input indexes file"),
+                 p("The user must provide the list of its available indexes as a two-column tab-delimited text file (without header). 
+                   Index ids are in the first column and the corresponding sequences in the second. An example of such a file is available ", 
+                   a("here", href="https://github.com/PF2-pasteur-fr/checkMyIndex/blob/master/inputIndexesExample.txt")," to test the application."),
+                 
+                 h3("Parameters"),
+                 p(strong("Total number of samples"), "in your experiment (can be greater than the number of available indexes)."),
+                 p(strong("Multiplexing rate"), "i.e. number of samples per lane (only divisors of the total number of samples are proposed)."),
+                 p(strong("Constraint on the indexes"), "to avoid having two samples or two lanes with the same index(es)."),
+                 p(strong("Maximum number of trials"), "can be increased if a solution is difficult to find with the parameters chosen."),
+                 
+                 h3("About"),
+                 p("This application has been developed at the Transcriptome & Epigenome Platform of the Biomics pole by Hugo Varet. Feel free to send an e-mail to", 
+                   a("hugo.varet@pasteur.fr"), "for any suggestion or bug report."),
+                 p("Source code and instructions to run it locally are available on", a("GitHub", href="https://github.com/PF2-pasteur-fr/checkMyIndex"), "."))
+
       )
     )
   )

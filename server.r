@@ -18,9 +18,10 @@ shinyServer(function(input, output) {
   
   # propose both the possible nb samples and multiplexing rates according to the input list of indexes
   output$nbSamples <- renderUI({nr <- nrow(inputIndex())
-                                selectInput("nbSamples", label="Total number of samples in the experiment", 
-                                            choices=2:nr, selected=nr)})
+                                numericInput("nbSamples", label="Total number of samples in the experiment",
+                                             value=nr, min=2, step=1)})
   output$multiplexingRate <- renderUI({nbSamples <- as.numeric(input$nbSamples)
+                                       if (is.na(nbSamples) | nbSamples <= 1) stop("Number of samples must be greater than 1.")
                                        mr <- 1:nbSamples
                                        choices <- mr[sapply(mr, function(x) nbSamples %% x == 0)]
                                        selectInput("multiplexingRate", label="Multiplexing rate (i.e. number of samples per lane)", 
@@ -53,8 +54,10 @@ shinyServer(function(input, output) {
   output$textDescribingSolution <- renderText({textDescribingSolution()})
   
   displaySolution <- eventReactive(input$go, {
+    unicityConstraint <- ifelse(input$unicityConstraint=="None", "none",
+                                ifelse(input$unicityConstraint=="Use each combination only once", "lane", "index"))
     return(findSolution(findCompatibleIndexes(), inputIndex(), as.numeric(input$nbSamples), as.numeric(input$multiplexingRate), 
-                        input$uniqueIndexes, input$uniqueCombinations, as.numeric(input$nbMaxTrials)))
+                        unicityConstraint, as.numeric(input$nbMaxTrials)))
   })
   output$solution <- renderDataTable({displaySolution()},options=list(paging=FALSE,searching=FALSE))
   

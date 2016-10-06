@@ -1,4 +1,4 @@
-# this file contains the fonctions used in the "checkMyIndex" shiny application
+# this file contains the functions used in both the "checkMyIndex" script and shiny application
 
 checkInputIndexes <- function(index){
   if (any(duplicated(index$id))) stop("Input index ids are not unique, please check your input file.")
@@ -23,10 +23,10 @@ searchCompatibleIndexes <- function(index, nbSamplesPerLane){
   indexesCombinations[sapply(indexesCombinations, isIndexesCombinationCompatible)]
 }
 
-searchOneSolution <- function(compatibleIndexes, index, nbSamples, multiplexingRate, uniqueIndexes=FALSE, uniqueCombinations=TRUE){
+searchOneSolution <- function(compatibleIndexes, index, nbSamples, multiplexingRate, unicityConstraint="none"){
   # goal: look for a solution (i.e. a combination of combination of indexes) such that
-  #  - each index is used only once if required (uniqueIndexes parameter)
-  #  - each combination of indexes is used only once if required (uniqueCombinations parameter)
+  #  - each index is used only once if required (unicityConstraint parameter)
+  #  - each combination of indexes is used only once if required (unicityConstraint parameter)
   # this function can return NULL if no solution is found (need to re-run in that case)
   nbLanes <- nbSamples/multiplexingRate
   compatibleCombinations <- vector(mode="list", length=nbLanes)
@@ -38,28 +38,24 @@ searchOneSolution <- function(compatibleIndexes, index, nbSamples, multiplexingR
       i <- sample(1:length(compatibleIndexes), 1, FALSE)
       compatibleCombinations[[k]] <- compatibleIndexes[[i]]
       # remove either the combination used or all the combinations for which an index has already been selected
-      if (uniqueIndexes){
-        compatibleIndexes <- compatibleIndexes[!sapply(compatibleIndexes, function(tab) any(tab$id %in% compatibleCombinations[[k]]$id))]
-      } else{
-        if (uniqueCombinations) compatibleIndexes <- compatibleIndexes[-i]
-      }
+      if (unicityConstraint=="index") compatibleIndexes <- compatibleIndexes[!sapply(compatibleIndexes, function(tab) any(tab$id %in% compatibleCombinations[[k]]$id))]
+      if (unicityConstraint=="lane") compatibleIndexes <- compatibleIndexes[-i]
       k <- k+1
     }
   }
   data.frame(sample=1:nbSamples, lane=rep(1:nbLanes, each=multiplexingRate), do.call("rbind", compatibleCombinations))
 }
 
-findSolution <- function(compatibleIndexes, index, nbSamples, multiplexingRate, uniqueIndexes=TRUE, uniqueCombinations=TRUE, nbMaxTrials=1000){
+findSolution <- function(compatibleIndexes, index, nbSamples, multiplexingRate, unicityConstraint="none", nbMaxTrials=1000){
   # this function run searchOneSolution() searchOneSolution times until finding a solution based on the parameters defined
-  if (nbSamples > nrow(index)) stop("More samples than available indexes.")
+  if (unicityConstraint=="index" & nbSamples > nrow(index)) stop("More samples than available indexes: cannot use each index only once.")
   if (nbSamples %% multiplexingRate != 0) stop("Number of samples must be a multiple of the multiplexing rate.")
-  if (uniqueIndexes & !uniqueCombinations) stop("Cannot use only unique indexes but some combinations several times.")
-  if (uniqueCombinations && length(compatibleIndexes)<nbSamples/multiplexingRate){
-    stop("Number of combinations of compatible indexes lower than the number of lanes desired. You can allow combinations to be used several times.")
+  if (unicityConstraint!="none" && length(compatibleIndexes)<nbSamples/multiplexingRate){
+    stop("Number of combinations of compatible indexes lower than the number of lanes desired. You can remove the index or lane unicity constraint.")
   }
   nbTrials <- 1
   while (nbTrials <= nbMaxTrials){
-    solution <- searchOneSolution(compatibleIndexes, index, nbSamples, multiplexingRate, uniqueIndexes, uniqueCombinations)
+    solution <- searchOneSolution(compatibleIndexes, index, nbSamples, multiplexingRate, unicityConstraint)
     if (!is.null(solution)) return(solution) else nbTrials <- nbTrials + 1
   }
   stop(paste("No solution found after", nbMaxTrials, "trials, you can increase this number in the parameters."))
