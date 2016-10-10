@@ -36,15 +36,15 @@ Here are 3 examples using the input example file `inputIndexesExample.txt`:
 
 * List of 9 indexes for 9 samples distributed on 3 lanes:
 
-`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --nbSamples=9 --multiplexingRate=3`
+`Rscript checkMyIndex.r -i inputIndexesExample.txt -n 9 -m 3`
 
 * List of 12 indexes for 12 samples distributed on 4 lanes using each lane combination only once:
 
-`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --nbSamples=12 --multiplexingRate=3 --unicityConstraint=lane`
+`Rscript checkMyIndex.r -i inputIndexesExample.txt -n 12 -m 3 -u lane`
 
 * List of 12 indexes for 12 samples distributed on 4 lanes using each index only once:
 
-`Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt --nbSamples=12 --multiplexingRate=3 --unicityConstraint=index`
+`Rscript checkMyIndex.r -i inputIndexesExample.txt -n 12 -m 3 -u index`
 
 The help page of the script can be displayed running the following command: 
 
