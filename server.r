@@ -18,17 +18,22 @@ shinyServer(function(input, output) {
   outputOptions(output, "indexUploaded", suspendWhenHidden=FALSE)
   
   # propose both the possible nb samples and multiplexing rates according to the input list of indexes
-  output$nbSamples <- renderUI({nr <- nrow(inputIndex())
-                                numericInput("nbSamples", label="Total number of samples in the experiment",
-                                             value=nr, min=2, step=1)})
-  output$multiplexingRate <- renderUI({nbSamples <- as.numeric(input$nbSamples)
-                                       if (is.na(nbSamples) || nbSamples %% 1 != 0) stop("Number of samples must be an integer")
-                                       if (nbSamples <= 1) stop("Number of samples must be greater than 1.")
-                                       mr <- 1:nbSamples
-                                       choices <- mr[sapply(mr, function(x) nbSamples %% x == 0)]
-                                       selectInput("multiplexingRate", label="Multiplexing rate (i.e. number of samples per lane)", 
-                                                   choices=choices, selected=choices[2])
-                                      })
+  output$nbSamples <- renderUI({if (!is.null(inputIndex())){
+                                  nr <- nrow(inputIndex())
+                                  numericInput("nbSamples", label="Total number of samples in the experiment", value=nr, min=2, step=1)
+                               } else{
+                                 ""
+                               }})
+  output$multiplexingRate <- renderUI({if (!is.null(input$nbSamples)){
+                                         nbSamples <- as.numeric(input$nbSamples)
+                                         if (is.na(nbSamples) || nbSamples %% 1 != 0) stop("Number of samples must be an integer")
+                                         if (nbSamples <= 1) stop("Number of samples must be greater than 1.")
+                                         mr <- 1:nbSamples
+                                         choices <- mr[sapply(mr, function(x) nbSamples %% x == 0)]
+                                         selectInput("multiplexingRate", label="Multiplexing rate (i.e. number of samples per lane)", choices=choices, selected=choices[2])
+                                      } else{
+                                        ""
+                                      }})
 
   # list of input indexes
   output$inputIndex <- renderDataTable({inputIndex()},options=list(paging=FALSE,searching=FALSE))
