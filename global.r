@@ -6,21 +6,23 @@ checkInputIndexes <- function(index){
   if (length(table(sapply(index$seq, nchar)))>1) stop("Input indexes do not have all the same length, please check your input file.")
 }
 
-isIndexesCombinationCompatible <- function(index){
+isIndexesCombinationCompatible <- function(index, minRedGreen=1){
   # return TRUE if the input indexes are compatible (i.e. can be used within the same lane)
+  if (nrow(index)==1) return(TRUE)
   index$seqColor <- gsub("A|C", "R", index$seq)             # A and C are red
   index$seqColor <- gsub("G|T", "G", index$seqColor)        # G and T are green
   matColors <- matrix(unlist(sapply(index$seqColor, strsplit, "")), byrow=TRUE, nrow=nrow(index))  
-  percentageRed <- apply(matColors, 2, function(x) mean(x=="R"))
-  !any(percentageRed == 0 | percentageRed == 1) | nrow(index)==1
+  sumRed <- apply(matColors, 2, function(x) sum(x=="R"))
+  sumGreen <- nrow(matColors) - sumRed
+  all(sumRed >= minRedGreen & sumGreen >= minRedGreen)
 }
 
-searchCompatibleIndexes <- function(index, nbSamplesPerLane){
+searchCompatibleIndexes <- function(index, nbSamplesPerLane, minRedGreen=1){
   # generate the list of all the possible combinations
   possibleCombinations <- combn(x=index$id, m=nbSamplesPerLane, simplify=FALSE)
   indexesCombinations <- lapply(possibleCombinations, function(x) index[index$id %in% x,])
   # select only those compatible
-  indexesCombinations[sapply(indexesCombinations, isIndexesCombinationCompatible)]
+  indexesCombinations[sapply(indexesCombinations, isIndexesCombinationCompatible, minRedGreen=minRedGreen)]
 }
 
 searchOneSolution <- function(compatibleIndexes, index, nbSamples, multiplexingRate, unicityConstraint="none"){
@@ -47,7 +49,7 @@ searchOneSolution <- function(compatibleIndexes, index, nbSamples, multiplexingR
 }
 
 findSolution <- function(compatibleIndexes, index, nbSamples, multiplexingRate, unicityConstraint="none", nbMaxTrials=1000){
-  # this function run searchOneSolution() searchOneSolution times until finding a solution based on the parameters defined
+  # this function run searchOneSolution() nbMaxTrials times until finding a solution based on the parameters defined
   if (unicityConstraint=="index" & nbSamples > nrow(index)) stop("More samples than available indexes: cannot use each index only once.")
   if (nbSamples %% multiplexingRate != 0) stop("Number of samples must be a multiple of the multiplexing rate.")
   if (unicityConstraint!="none" && length(compatibleIndexes)<nbSamples/multiplexingRate){

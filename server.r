@@ -35,21 +35,36 @@ shinyServer(function(input, output) {
                                         ""
                                       }})
 
+  # minimal number of red/green per position
+  output$minRedGreen <- renderUI({if (!is.null(input$multiplexingRate)){
+                                  maxRedGreen <- max(round(as.numeric(input$multiplexingRate)/2, 0), 1)
+                                  selectInput("minRedGreen", label="Minimal number of red/green lights per position", choices=1:maxRedGreen, selected=1)
+                                  } else{
+                                  ""
+                                  }})
+
   # list of input indexes
   output$inputIndex <- renderDataTable({inputIndex()},options=list(paging=FALSE,searching=FALSE))
   
   findCompatibleIndexes <- reactive({
-    searchCompatibleIndexes(index=inputIndex(), nbSamplesPerLane=as.numeric(input$multiplexingRate))
+    searchCompatibleIndexes(index=inputIndex(), nbSamplesPerLane=as.numeric(input$multiplexingRate), minRedGreen=as.numeric(input$minRedGreen))
   })
   
-  textNbCompatibleIndexes <- eventReactive(input$go, {
-    if (is.null(input$multiplexingRate) | is.null(inputIndex())){
+  textNbCombinations <- reactive({
+    if (is.null(input$multiplexingRate) | is.null(input$minRedGreen) | is.null(inputIndex())){
       ""
     } else{
-      paste("In the input list of", nrow(inputIndex()), "indexes: there are",
-            choose(n=nrow(inputIndex()), k=as.numeric(input$multiplexingRate)), 
-            "possible combinations of", as.numeric(input$multiplexingRate), "indexes. Among them",
-            length(findCompatibleIndexes()), "contain compatible indexes.")
+      paste("In the input list of", nrow(inputIndex()), "indexes: there are", choose(n=nrow(inputIndex()), k=as.numeric(input$multiplexingRate)), 
+            "possible combinations of", as.numeric(input$multiplexingRate), "indexes (not necessarily compatible).")
+    }
+  })
+  output$textNbCombinations <- renderText({textNbCombinations()})  
+
+  textNbCompatibleIndexes <- eventReactive(input$go, {
+    if (is.null(input$multiplexingRate) | is.null(input$minRedGreen) | is.null(inputIndex())){
+      ""
+    } else{
+      paste("Among them", length(findCompatibleIndexes()), "contain compatible indexes.")
     }
   })
   output$textNbCompatibleIndexes <- renderText({textNbCompatibleIndexes()})
@@ -65,13 +80,15 @@ shinyServer(function(input, output) {
   output$textDescribingSolution <- renderText({textDescribingSolution()})
   
   displaySolution <- eventReactive(input$go, {
-    if (is.null(input$multiplexingRate) | is.null(inputIndex())){
+    if (is.null(input$multiplexingRate) | is.null(input$minRedGreen) | is.null(inputIndex())){
       ""
     } else{
       unicityConstraint <- ifelse(input$unicityConstraint=="None", "none",
                                   ifelse(input$unicityConstraint=="Use each combination only once", "lane", "index"))
-      return(findSolution(findCompatibleIndexes(), inputIndex(), as.numeric(input$nbSamples), as.numeric(input$multiplexingRate), 
-                          unicityConstraint, as.numeric(input$nbMaxTrials)))
+      nbSamples <- as.numeric(input$nbSamples)
+      multiplexingRate <- as.numeric(input$multiplexingRate)
+      nbMaxTrials <- as.numeric(input$nbMaxTrials)
+      return(findSolution(findCompatibleIndexes(), inputIndex(), nbSamples, multiplexingRate, unicityConstraint, nbMaxTrials))
     }
   })
   output$solution <- renderDataTable({displaySolution()},options=list(paging=FALSE,searching=FALSE))

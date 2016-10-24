@@ -11,6 +11,7 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
       fileInput("inputFile", label="Select your tab-delimited file containing the index ids and sequences", accept="text"),
       conditionalPanel(condition="output.indexUploaded", {uiOutput("nbSamples")}),
       conditionalPanel(condition="output.indexUploaded", {uiOutput("multiplexingRate")}),
+      conditionalPanel(condition="output.indexUploaded", {uiOutput("minRedGreen")}),
       selectInput("unicityConstraint", label="Constraint on the indexes", choices=c("None","Use each combination only once","Use each index only once"), selected="None"),
       selectInput("nbMaxTrials", label="Maximum number of trials to find a solution", choices=10^(1:4), selected=10),
       actionButton("go", label="Search for a solution")
@@ -24,6 +25,7 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
         
         # 2nd panel: results
         tabPanel("Proposed flowcell design",
+                 p(textOutput("textNbCombinations")),
                  p(textOutput("textNbCompatibleIndexes")),
                  p(textOutput("textDescribingSolution")),
                  dataTableOutput("solution"),
@@ -41,6 +43,7 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                  h3("Parameters"),
                  p(strong("Total number of samples"), "in your experiment (can be greater than the number of available indexes)."),
                  p(strong("Multiplexing rate"), "i.e. number of samples per lane (only divisors of the total number of samples are proposed)."),
+                 p(strong("Minimal number of red/green lights per position"), "is equal to 1 to have compatible indexes but can be increased to equilibrate the proportion of red/green lights."),
                  p(strong("Constraint on the indexes"), "to avoid having two samples or two lanes with the same index(es)."),
                  p(strong("Maximum number of trials"), "can be increased if a solution is difficult to find with the parameters chosen."),
                  

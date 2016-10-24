@@ -23,6 +23,12 @@ option_list <- list(
               dest="multiplexingRate",
               help="multiplexing rate, i.e. number of samples per lane (must be a divisor of the total number of samples)"),
   
+  make_option(c("-r","--minRedGreen"),
+              type="integer",
+              default=1,
+              dest="minRedGreen",
+              help="is equal to 1 to have compatible indexes but can be increased to equilibrate the proportion of red/green lights [default: %default]"),
+
   make_option(c("-u","--unicityConstraint"),
               type="character",
               default="none",
@@ -51,6 +57,7 @@ inputFile <- opt$inputFile
 multiplexingRate <- as.numeric(opt$multiplexingRate)
 nbSamples <- as.numeric(opt$nbSamples)
 unicityConstraint <- opt$unicityConstraint
+minRedGreen <- as.numeric(opt$minRedGreen)
 outputFile <- opt$outputFile
 nbMaxTrials <- as.numeric(opt$nbMaxTrials)
 
@@ -61,15 +68,17 @@ index <- read.table(inputFile, header=FALSE, sep="\t", stringsAsFactors=FALSE, c
 
 # some basic checkings
 checkInputIndexes(index)
-if (nbSamples <= 1) stop("\nNumber of samples must be greater than 1.")
+if (nbSamples %% 1 != 0 || nbSamples <= 1) stop("\nNumber of samples must be an integer greater than 1.")
 if (!unicityConstraint %in% c("none","index","lane")) stop("\nunicityConstraint parameter must be equal to 'none', 'lane' or 'index'.")
 if (nbSamples %% multiplexingRate != 0) stop("\nNumber of samples must be a multiple of the multiplexing rate.")
+if (minRedGreen > multiplexingRate/2) stop("\nMinimal number of red/green lights per position can't be higher than the multiplexing rate divided by 2.")
 
 cat("--------------- Parameters ---------------\n")
 cat("Input file:", inputFile,"\n")
 cat("List of input indexes:\n")
 print(index, row.names=FALSE)
 cat("Multiplexing rate:", multiplexingRate,"\n")
+cat("Minimal number of red/green lights per position:", minRedGreen,"\n")
 cat("Number of samples:", nbSamples,"\n")
 cat("Number of lanes:", nbLanes,"\n")
 cat("Constraint:", ifelse(unicityConstraint=="none","none",
@@ -79,9 +88,10 @@ cat("Maximum number of iterations to find a solution:", nbMaxTrials,"\n")
 cat("------------------------------------------\n")
 
 # how many possible combinations (combinatory logic using C^n_k)
-cat("\nIn the input list of", nrow(index), "indexes:", choose(n=nrow(index), k=multiplexingRate), "possible combinations of", multiplexingRate, "indexes (not necessarily compatible)\n")
+cat("\nIn the input list of", nrow(index), "indexes:", choose(n=nrow(index), k=multiplexingRate), 
+    "possible combinations of", multiplexingRate, "indexes (not necessarily compatible)\n")
 
-compatibleIndexes <- searchCompatibleIndexes(index, nbSamplesPerLane=multiplexingRate)
+compatibleIndexes <- searchCompatibleIndexes(index, nbSamplesPerLane=multiplexingRate, minRedGreen)
 cat("In the input list of", nrow(index), "indexes:", length(compatibleIndexes), "combinations of", multiplexingRate, "compatibles indexes\n\n")
 
 cat(paste0("Let's try to find a solution for ", nbLanes, " lanes of ", multiplexingRate, " samples using:\n - ",
