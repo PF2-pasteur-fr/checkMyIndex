@@ -17,7 +17,7 @@ option_list <- list(
               type="integer",
               dest="nbSamples",
               help="total number of samples in the experiment (can be greater than the number of available indexes)"),
-
+  
   make_option(c("-m","--multiplexingRate"),
               type="integer",
               dest="multiplexingRate",
@@ -28,7 +28,7 @@ option_list <- list(
               default=1,
               dest="minRedGreen",
               help="is equal to 1 to have compatible indexes but can be increased to equilibrate the proportion of red/green lights [default: %default]"),
-
+  
   make_option(c("-u","--unicityConstraint"),
               type="character",
               default="none",
@@ -92,7 +92,8 @@ cat("\nIn the input list of", nrow(index), "indexes:", choose(n=nrow(index), k=m
     "possible combinations of", multiplexingRate, "indexes (not necessarily compatible)\n")
 
 compatibleIndexes <- searchCompatibleIndexes(index, nbSamplesPerLane=multiplexingRate, minRedGreen)
-cat("In the input list of", nrow(index), "indexes:", length(compatibleIndexes), "combinations of", multiplexingRate, "compatibles indexes\n\n")
+cat("In the input list of", nrow(index), "indexes:", length(compatibleIndexes), "combinations of", multiplexingRate, 
+    "compatibles indexes (i.e. at least", minRedGreen, "red/green light(s) per position)\n\n")
 
 cat(paste0("Let's try to find a solution for ", nbLanes, " lanes of ", multiplexingRate, " samples using:\n - ",
            nbSamples, ifelse(unicityConstraint!="index"," non",""), " unique indexes\n",

@@ -3,7 +3,7 @@ library(shiny)
 options(shiny.maxRequestSize = 5*1024^2) # limit size for the input file to upload (5Mo here)
 
 shinyServer(function(input, output) {
-
+  
   inputIndex <- reactive({
     if(is.null(input$inputFile)){
       return(NULL)
@@ -19,30 +19,30 @@ shinyServer(function(input, output) {
   
   # propose both the possible nb samples and multiplexing rates according to the input list of indexes
   output$nbSamples <- renderUI({if (!is.null(inputIndex())){
-                                  nr <- nrow(inputIndex())
-                                  numericInput("nbSamples", label="Total number of samples in the experiment", value=nr, min=2, step=1)
-                               } else{
-                                 ""
-                               }})
+    nr <- nrow(inputIndex())
+    numericInput("nbSamples", label="Total number of samples in the experiment", value=nr, min=2, step=1)
+  } else{
+    ""
+  }})
   output$multiplexingRate <- renderUI({if (!is.null(input$nbSamples)){
-                                         nbSamples <- as.numeric(input$nbSamples)
-                                         if (is.na(nbSamples) || nbSamples %% 1 != 0) stop("Number of samples must be an integer")
-                                         if (nbSamples <= 1) stop("Number of samples must be greater than 1.")
-                                         mr <- 1:nbSamples
-                                         choices <- mr[sapply(mr, function(x) nbSamples %% x == 0)]
-                                         selectInput("multiplexingRate", label="Multiplexing rate (i.e. number of samples per lane)", choices=choices, selected=choices[2])
-                                      } else{
-                                        ""
-                                      }})
-
+    nbSamples <- as.numeric(input$nbSamples)
+    if (is.na(nbSamples) || nbSamples %% 1 != 0) stop("Number of samples must be an integer")
+    if (nbSamples <= 1) stop("Number of samples must be greater than 1.")
+    mr <- 1:nbSamples
+    choices <- mr[sapply(mr, function(x) nbSamples %% x == 0)]
+    selectInput("multiplexingRate", label="Multiplexing rate (i.e. number of samples per lane)", choices=choices, selected=choices[2])
+  } else{
+    ""
+  }})
+  
   # minimal number of red/green per position
   output$minRedGreen <- renderUI({if (!is.null(input$multiplexingRate)){
-                                  maxRedGreen <- max(round(as.numeric(input$multiplexingRate)/2, 0), 1)
-                                  selectInput("minRedGreen", label="Minimal number of red/green lights per position", choices=1:maxRedGreen, selected=1)
-                                  } else{
-                                  ""
-                                  }})
-
+    maxRedGreen <- max(round(as.numeric(input$multiplexingRate)/2, 0), 1)
+    selectInput("minRedGreen", label="Minimal number of red/green lights per position", choices=1:maxRedGreen, selected=1)
+  } else{
+    ""
+  }})
+  
   # list of input indexes
   output$inputIndex <- renderDataTable({inputIndex()},options=list(paging=FALSE,searching=FALSE))
   
@@ -50,7 +50,7 @@ shinyServer(function(input, output) {
     searchCompatibleIndexes(index=inputIndex(), nbSamplesPerLane=as.numeric(input$multiplexingRate), minRedGreen=as.numeric(input$minRedGreen))
   })
   
-  textNbCombinations <- reactive({
+  textNbCombinations <- eventReactive(input$go, {
     if (is.null(input$multiplexingRate) | is.null(input$minRedGreen) | is.null(inputIndex())){
       ""
     } else{
@@ -59,12 +59,12 @@ shinyServer(function(input, output) {
     }
   })
   output$textNbCombinations <- renderText({textNbCombinations()})  
-
+  
   textNbCompatibleIndexes <- eventReactive(input$go, {
     if (is.null(input$multiplexingRate) | is.null(input$minRedGreen) | is.null(inputIndex())){
       ""
     } else{
-      paste("Among them", length(findCompatibleIndexes()), "contain compatible indexes.")
+      paste("Among them", length(findCompatibleIndexes()), "contain compatible indexes (i.e. at least", input$minRedGreen, "red/green light(s) per position).")
     }
   })
   output$textNbCompatibleIndexes <- renderText({textNbCompatibleIndexes()})
@@ -74,7 +74,7 @@ shinyServer(function(input, output) {
       ""
     } else{
       paste0("Below is a solution for ", as.numeric(input$nbSamples)/as.numeric(input$multiplexingRate), 
-           " lanes of ", input$multiplexingRate, " samples using the parameters specified:")
+             " lanes of ", input$multiplexingRate, " samples using the parameters specified:")
     }
   })
   output$textDescribingSolution <- renderText({textDescribingSolution()})
@@ -84,7 +84,8 @@ shinyServer(function(input, output) {
       ""
     } else{
       unicityConstraint <- ifelse(input$unicityConstraint=="None", "none",
-                                  ifelse(input$unicityConstraint=="Use each combination only once", "lane", "index"))
+                                  ifelse(input$unicityConstraint=="Use each combination only once", 
+                                         "lane", "index"))
       nbSamples <- as.numeric(input$nbSamples)
       multiplexingRate <- as.numeric(input$multiplexingRate)
       nbMaxTrials <- as.numeric(input$nbMaxTrials)

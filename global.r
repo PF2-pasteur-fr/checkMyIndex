@@ -1,4 +1,5 @@
 # this file contains the functions used in both the "checkMyIndex" script and shiny application
+library(parallel)
 
 checkInputIndexes <- function(index){
   if (any(duplicated(index$id))) stop("Input index ids are not unique, please check your input file.")
@@ -18,11 +19,14 @@ isIndexesCombinationCompatible <- function(index, minRedGreen=1){
 }
 
 searchCompatibleIndexes <- function(index, nbSamplesPerLane, minRedGreen=1){
+  Clust=makeCluster(detectCores())
   # generate the list of all the possible combinations
   possibleCombinations <- combn(x=index$id, m=nbSamplesPerLane, simplify=FALSE)
-  indexesCombinations <- lapply(possibleCombinations, function(x) index[index$id %in% x,])
+  indexesCombinations <- parLapply(cl=Clust, X=possibleCombinations, fun=function(x, index) index[index$id %in% x,], index=index)
   # select only those compatible
-  indexesCombinations[sapply(indexesCombinations, isIndexesCombinationCompatible, minRedGreen=minRedGreen)]
+  compatibleIndexes <- indexesCombinations[parSapply(cl=Clust, X=indexesCombinations, FUN=isIndexesCombinationCompatible, minRedGreen=minRedGreen)]
+  stopCluster(Clust)
+  return(compatibleIndexes)
 }
 
 searchOneSolution <- function(compatibleIndexes, index, nbSamples, multiplexingRate, unicityConstraint="none"){

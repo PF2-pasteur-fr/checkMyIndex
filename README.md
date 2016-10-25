@@ -24,15 +24,9 @@ One can use the application locally running the two following lines in R:
 
 `runGitHub("PF2-pasteur-fr/checkMyIndex", launch.browser=TRUE)`
 
-**Note**: the *shiny* R package must be available, run `install.packages(shiny)` in R to install it.
-
 ## Rscript command line
 
-*checkMyIndex* can be executed calling `checkMyIndex.r` with `Rscript`. As `checkMyIndex.r` sources `global.r`, both files must be placed in the same directory.
-
-**Note**: the *optparse* R package must be available to interpret the input parameters, run `install.packages(optparse)` in R to install it. 
-
-Here are 3 examples using the input example file `inputIndexesExample.txt`:
+*checkMyIndex* can be executed calling `checkMyIndex.r` with `Rscript`. As `checkMyIndex.r` sources `global.r`, both files must be placed in the same directory. Here are 3 examples using the input example file `inputIndexesExample.txt`:
 
 * List of 9 indexes for 9 samples distributed on 3 lanes:
 
@@ -49,6 +43,18 @@ Here are 3 examples using the input example file `inputIndexesExample.txt`:
 The help page of the script can be displayed running the following command: 
 
 `Rscript checkMyIndex.r --help`
+
+## Requirements
+
+Here is the list of the R packages needed to run *checkMyIndex*:
+
+* *shiny* to run the shiny application locally
+
+* *optparse* to interpret the input parameters when using the Rscript command line
+
+* *parallel* to speed up the calculations
+
+One can install each of these packages running `install.packages(packageName)` in R.
 
 ## About checkMyIndex
 
