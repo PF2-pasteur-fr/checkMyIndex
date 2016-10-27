@@ -44,7 +44,13 @@ option_list <- list(
   make_option(c("-b","--nbMaxTrials"),
               default=10000,
               dest="nbMaxTrials", 
-              help="maximum number of iterations to find a solution [default: %default]")
+              help="maximum number of iterations to find a solution [default: %default]"),
+  
+  make_option(c("-s","--selectCompIndexes"),
+              default=FALSE,
+              action="store_true",
+              dest="selectCompIndexes", 
+              help="use this option to select the compatible indexes before looking for a solution (can take some time but then speed up the research of a solution)")
 )
 
 parser <- OptionParser(usage="usage: %prog [options]",
@@ -60,16 +66,16 @@ unicityConstraint <- opt$unicityConstraint
 minRedGreen <- as.numeric(opt$minRedGreen)
 outputFile <- opt$outputFile
 nbMaxTrials <- as.numeric(opt$nbMaxTrials)
+selectCompIndexes <- as.logical(opt$selectCompIndexes)
 
 source("global.r")
 
 nbLanes <- nbSamples/multiplexingRate
-index <- read.table(inputFile, header=FALSE, sep="\t", stringsAsFactors=FALSE, col.names=c("id","seq"))
+index <- readIndexesFile(inputFile)
 
 # some basic checkings
 checkInputIndexes(index)
 if (nbSamples %% 1 != 0 || nbSamples <= 1) stop("\nNumber of samples must be an integer greater than 1.")
-if (!unicityConstraint %in% c("none","index","lane")) stop("\nunicityConstraint parameter must be equal to 'none', 'lane' or 'index'.")
 if (nbSamples %% multiplexingRate != 0) stop("\nNumber of samples must be a multiple of the multiplexing rate.")
 if (minRedGreen > multiplexingRate/2) stop("\nMinimal number of red/green lights per position can't be higher than the multiplexing rate divided by 2.")
 
@@ -82,23 +88,22 @@ cat("Minimal number of red/green lights per position:", minRedGreen,"\n")
 cat("Number of samples:", nbSamples,"\n")
 cat("Number of lanes:", nbLanes,"\n")
 cat("Constraint:", ifelse(unicityConstraint=="none","none",
-                          ifelse(unicityConstraint=="lane", "use each combination of compatible indexes only once", "use each index only once")),"\n")
+                          ifelse(unicityConstraint=="lane", "use each combination of compatible indexes only once", 
+                                 "use each index only once")),"\n")
 cat("Output file:", outputFile,"\n")
 cat("Maximum number of iterations to find a solution:", nbMaxTrials,"\n")
+cat("Prior selection of the compatible indexes:", selectCompIndexes,"\n")
 cat("------------------------------------------\n")
 
 # how many possible combinations (combinatory logic using C^n_k)
-cat("\nIn the input list of", nrow(index), "indexes:", choose(n=nrow(index), k=multiplexingRate), 
-    "possible combinations of", multiplexingRate, "indexes (not necessarily compatible)\n")
+cat("\nIn the input list of", nrow(index), "indexes:", choose(n=nrow(index), k=multiplexingRate), "possible combinations of", multiplexingRate, "indexes (not necessarily compatible)\n")
 
-compatibleIndexes <- searchCompatibleIndexes(index, nbSamplesPerLane=multiplexingRate, minRedGreen)
-cat("In the input list of", nrow(index), "indexes:", length(compatibleIndexes), "combinations of", multiplexingRate, 
-    "compatibles indexes (i.e. at least", minRedGreen, "red/green light(s) per position)\n\n")
+# generate the list of indexes
+indexesList <- generateListOfIndexesCombinations(index, multiplexingRate, minRedGreen, selectCompIndexes)
+if (selectCompIndexes) cat("Among them", length(indexesList), "contain compatible indexes (i.e. at least", minRedGreen, "red/green light(s) per position)\n")
 
-cat(paste0("Let's try to find a solution for ", nbLanes, " lanes of ", multiplexingRate, " samples using:\n - ",
-           nbSamples, ifelse(unicityConstraint!="index"," non",""), " unique indexes\n",
-           " - each combination ", ifelse(unicityConstraint!="none", "only once", "potentially several times"), "\n\n"))
-print(solution <- findSolution(compatibleIndexes, index, nbSamples, multiplexingRate, unicityConstraint, nbMaxTrials), row.names=FALSE)
+cat("Let's try to find a solution for", nbLanes, "lanes of", multiplexingRate, "samples using the specified parameters\n\n")
+print(solution <- findSolution(indexesList, index, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, nbMaxTrials, selectCompIndexes), row.names=FALSE)
 
 if (!is.null(outputFile)){
   write.table(solution, outputFile, col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)
