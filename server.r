@@ -35,7 +35,7 @@ shinyServer(function(input, output) {
   }})
   # propose some minimal number of red/green per position according to the multiplexing rate
   output$minRedGreen <- renderUI({if (!is.null(input$multiplexingRate)){
-    maxRedGreen <- max(round(as.numeric(input$multiplexingRate)/2, 0), 1)
+    maxRedGreen <- max(trunc(as.numeric(input$multiplexingRate)/2), 1)
     selectInput("minRedGreen", label="Minimal number of red/green lights per position", choices=1:maxRedGreen, selected=1)
   } else{
     ""

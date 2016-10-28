@@ -5,6 +5,7 @@ readIndexesFile <- function(file) read.table(file, header=FALSE, sep="\t", strin
 
 checkInputIndexes <- function(index){
   if (any(duplicated(index$id))) stop("Input index ids are not unique, please check your input file.")
+  if (any(duplicated(index$sequence))) stop("Input indexes are not unique, please check your input file.")
   if (!(all(unlist(strsplit(index$sequence,"")) %in% c("A","C","T","G")))) stop("Input indexes contain other characters than A, T, C and G, please check your input file.")
   if (length(table(sapply(index$sequence, nchar)))>1) stop("Input indexes do not have all the same length, please check your input file.")
 }
@@ -73,7 +74,29 @@ findSolution <- function(indexesList, index, nbSamples, multiplexingRate, unicit
   nbTrials <- 1
   while (nbTrials <= nbMaxTrials){
     solution <- searchOneSolution(indexesList, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, selectCompIndexes)
-    if (!is.null(solution)) return(solution) else nbTrials <- nbTrials + 1
+    if (!is.null(solution)){
+      checkProposedSolution(solution, unicityConstraint, minRedGreen)
+      return(solution)
+    } else{
+      nbTrials <- nbTrials + 1
+    }
   }
   stop(paste("No solution found after", nbMaxTrials, "trials, you can increase this number in the parameters."))
+}
+
+checkProposedSolution <- function(solution, unicityConstraint, minRedGreen){
+  # indexes not unique
+  err1 <- unicityConstraint=="index" & any(duplicated(solution$id))
+  # several lanes with the same combination of indexes
+  err2 <- unicityConstraint=="lane" & any(duplicated(split(solution$id, solution$lane)))
+  # different number of samples on the lanes
+  err3 <- length(table(table(solution$lane)))>1
+  # indexes not compatible on at least one lane
+  err4 <- any(!sapply(split(solution, solution$lane), areIndexesCompatible, minRedGreen))
+  err <- c(err1, err2, err3, err4)
+  if (any(err)){
+    stop("The solution proposed by the algorithm does not satisfy the constraints (",
+         paste(paste0("err", 1:length(err))[err], collapse=", "), 
+         "). Thanks to report this error to Hugo Varet <hugo.varet@pasteur.fr>")
+  }
 }
