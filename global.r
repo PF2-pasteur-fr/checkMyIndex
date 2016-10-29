@@ -20,6 +20,7 @@ areIndexesCompatible <- function(index, minRedGreen){
 }
 
 generateListOfIndexesCombinations <- function(index, multiplexingRate, minRedGreen, selectCompIndexes){
+  if (choose(n=nrow(index), k=multiplexingRate)>1e9) stop("Too many candidate combinations of indexes to find a solution, you can reduce the input number of indexes.")
   index$color <- gsub("G|T", "G", gsub("A|C", "R", index$sequence)) # A and C are red and G and T are green
   # generate the list of all the possible combinations
   Clust=makeCluster(max(c(detectCores(logical=FALSE)-1, 1)))
@@ -81,7 +82,7 @@ findSolution <- function(indexesList, index, nbSamples, multiplexingRate, unicit
       nbTrials <- nbTrials + 1
     }
   }
-  stop(paste("No solution found after", nbMaxTrials, "trials, you can increase this number in the parameters."))
+  stop(paste("No solution found after", nbMaxTrials, "trials using these parameters, you can modify them or increase the number of trials."))
 }
 
 checkProposedSolution <- function(solution, unicityConstraint, minRedGreen){
@@ -97,6 +98,6 @@ checkProposedSolution <- function(solution, unicityConstraint, minRedGreen){
   if (any(err)){
     stop("The solution proposed by the algorithm does not satisfy the constraints (",
          paste(paste0("err", 1:length(err))[err], collapse=", "), 
-         "). Thanks to report this error to Hugo Varet <hugo.varet@pasteur.fr>")
+         "). Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
   }
 }

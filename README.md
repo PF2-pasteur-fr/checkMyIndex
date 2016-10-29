@@ -5,7 +5,7 @@ Search for a set of compatible indexes for your sequencing experiment according 
 * the number of samples
 * the desired multiplexing rate (i.e. number of samples per lane)
 * the constraint on the indexes (none, use each one or each combination only once)
-* the minimum number of red/green lights at each position
+* the minimum number of red/green lights required at each position
 
 ## Input indexes file
 

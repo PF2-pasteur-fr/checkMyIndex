@@ -23,12 +23,6 @@ option_list <- list(
               dest="multiplexingRate",
               help="multiplexing rate, i.e. number of samples per lane (must be a divisor of the total number of samples)"),
   
-  make_option(c("-r","--minRedGreen"),
-              type="integer",
-              default=1,
-              dest="minRedGreen",
-              help="is equal to 1 to have compatible indexes but can be increased to equilibrate the proportion of red/green lights [default: %default]"),
-  
   make_option(c("-u","--unicityConstraint"),
               type="character",
               default="none",
@@ -41,16 +35,22 @@ option_list <- list(
               dest="outputFile",
               help="name of the output file to save the proposed sequencing design [default: %default (no output file created)]"),
   
-  make_option(c("-b","--nbMaxTrials"),
-              default=10000,
-              dest="nbMaxTrials", 
-              help="maximum number of iterations to find a solution [default: %default]"),
+  make_option(c("-r","--minRedGreen"),
+              type="integer",
+              default=1,
+              dest="minRedGreen",
+              help="minimum number of red/green lights required at each position [default: %default]"),
   
   make_option(c("-s","--selectCompIndexes"),
               default=FALSE,
               action="store_true",
               dest="selectCompIndexes", 
-              help="use this option to select the compatible indexes before looking for a solution (can take some time but then speed up the research of a solution)")
+              help="use this option to select the compatible indexes before looking for a solution (can take some time but then speed up the research of a solution)"),
+  
+  make_option(c("-b","--nbMaxTrials"),
+              default=10000,
+              dest="nbMaxTrials", 
+              help="maximum number of iterations to find a solution [default: %default]")
 )
 
 parser <- OptionParser(usage="usage: %prog [options]",
@@ -82,7 +82,6 @@ if (minRedGreen > multiplexingRate/2) stop("\nMinimal number of red/green lights
 cat("--------------- Parameters ---------------\n")
 cat("Input file:", inputFile,"\n")
 cat("List of input indexes:\n")
-print(index, row.names=FALSE)
 cat("Multiplexing rate:", multiplexingRate,"\n")
 cat("Minimal number of red/green lights per position:", minRedGreen,"\n")
 cat("Number of samples:", nbSamples,"\n")
