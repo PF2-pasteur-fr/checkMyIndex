@@ -63,27 +63,27 @@ shinyServer(function(input, output) {
     }
   })
   output$textNbCombinations <- renderText({textNbCombinations()})
-
+  
   # generate list of indexes
   generateList <- reactive({
     generateListOfIndexesCombinations(inputIndex(), as.numeric(input$multiplexingRate), minRedGreen(), selectCompIndexes())
   })
   
   textNbCompatibleIndexes <- eventReactive(input$go, {
-    if (is.null(input$multiplexingRate) | is.null(inputIndex()) | !selectCompIndexes()){
+    if (is.null(input$multiplexingRate) | is.null(inputIndex()) | !selectCompIndexes() || as.numeric(input$multiplexingRate)!=nrow(generateList()[[1]])){
       ""
     } else{
       paste("Among them", length(generateList()), "contain compatible indexes (i.e. at least", minRedGreen(), "red/green light(s) per position).")
     }
   })
   output$textNbCompatibleIndexes <- renderText({textNbCompatibleIndexes()})
-
+  
   textDescribingSolution <- eventReactive(input$go, {
     if (is.null(input$multiplexingRate) | is.null(inputIndex())){
       ""
     } else{
       paste("Below is a solution for", as.numeric(input$nbSamples)/as.numeric(input$multiplexingRate), 
-             "lanes of", input$multiplexingRate, "samples using the parameters specified:")
+            "lanes of", input$multiplexingRate, "samples using the parameters specified:")
     }
   })
   output$textDescribingSolution <- renderText({textDescribingSolution()})

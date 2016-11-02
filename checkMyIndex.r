@@ -45,7 +45,7 @@ option_list <- list(
               default=FALSE,
               action="store_true",
               dest="selectCompIndexes", 
-              help="use this option to select the compatible indexes before looking for a solution (can take some time but then speed up the research of a solution)"),
+              help="use this option to select the compatible indexes before looking for a solution (can take some time but be informative and then speed up the research of a solution)"),
   
   make_option(c("-b","--nbMaxTrials"),
               default=10000,
@@ -81,14 +81,13 @@ if (minRedGreen > multiplexingRate/2) stop("\nMinimal number of red/green lights
 
 cat("--------------- Parameters ---------------\n")
 cat("Input file:", inputFile,"\n")
-cat("List of input indexes:\n")
 cat("Multiplexing rate:", multiplexingRate,"\n")
-cat("Minimal number of red/green lights per position:", minRedGreen,"\n")
 cat("Number of samples:", nbSamples,"\n")
 cat("Number of lanes:", nbLanes,"\n")
 cat("Constraint:", ifelse(unicityConstraint=="none","none",
                           ifelse(unicityConstraint=="lane", "use each combination of compatible indexes only once", 
                                  "use each index only once")),"\n")
+cat("Minimal number of red/green lights per position:", minRedGreen,"\n")
 cat("Output file:", outputFile,"\n")
 cat("Maximum number of iterations to find a solution:", nbMaxTrials,"\n")
 cat("Prior selection of the compatible indexes:", selectCompIndexes,"\n")
@@ -99,7 +98,7 @@ cat("\nIn the input list of", nrow(index), "indexes:", choose(n=nrow(index), k=m
 
 # generate the list of indexes
 indexesList <- generateListOfIndexesCombinations(index, multiplexingRate, minRedGreen, selectCompIndexes)
-if (selectCompIndexes) cat("Among them", length(indexesList), "contain compatible indexes (i.e. at least", minRedGreen, "red/green light(s) per position)\n")
+if (selectCompIndexes & nrow(indexesList[[1]])==multiplexingRate) cat("Among them", length(indexesList), "contain compatible indexes (i.e. at least", minRedGreen, "red/green light(s) per position)\n")
 
 cat("Let's try to find a solution for", nbLanes, "lanes of", multiplexingRate, "samples using the specified parameters\n\n")
 print(solution <- findSolution(indexesList, index, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, nbMaxTrials, selectCompIndexes), row.names=FALSE)

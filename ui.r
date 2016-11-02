@@ -47,7 +47,7 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                  p(strong("Multiplexing rate"), "i.e. number of samples per lane (only divisors of the total number of samples are proposed)."),
                                  p(strong("Constraint on the indexes"), "to avoid having two samples or two lanes with the same index(es)."),
                                  h3("Optional parameters"),
-                                 p(strong("Prior selection of the compatible indexes"), "can take some time but then speed up the research of a solution."),
+                                 p(strong("Prior selection of the compatible indexes"), "can take some time but be informative and then speed up the research of a solution."),
                                  p(strong("Minimal number of red/green lights"), "required at each position is equal to 1 by default to have compatible indexes but can be increased."),
                                  p(strong("Maximum number of trials"), "can be increased if a solution is difficult to find with the parameters chosen."),
                                  

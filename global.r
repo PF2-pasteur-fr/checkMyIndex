@@ -19,12 +19,14 @@ areIndexesCompatible <- function(index, minRedGreen){
   return(all(sumRed >= minRedGreen & sumGreen >= minRedGreen))
 }
 
-generateListOfIndexesCombinations <- function(index, multiplexingRate, minRedGreen, selectCompIndexes){
-  if (choose(n=nrow(index), k=multiplexingRate)>1e9) stop("Too many candidate combinations of indexes to find a solution, you can reduce the input number of indexes.")
+generateListOfIndexesCombinations <- function(index, nbSamplesPerLane, minRedGreen, selectCompIndexes){
+  # optimize nbSamplesPerLane to generate less combinations of indexes
+  while (choose(nrow(index), nbSamplesPerLane)>1e5 & nbSamplesPerLane>2 & nbSamplesPerLane-1>=2*minRedGreen) nbSamplesPerLane <- nbSamplesPerLane - 1
+  if (choose(nrow(index), nbSamplesPerLane)>1e9) stop("Too many candidate combinations of indexes to easily find a solution, you can remove input indexes and/or reduce the multiplexing rate.")
   index$color <- gsub("G|T", "G", gsub("A|C", "R", index$sequence)) # A and C are red and G and T are green
   # generate the list of all the possible combinations
   Clust=makeCluster(max(c(detectCores(logical=FALSE)-1, 1)))
-  possibleCombinations <- combn(x=index$id, m=multiplexingRate, simplify=FALSE)
+  possibleCombinations <- combn(x=index$id, m=nbSamplesPerLane, simplify=FALSE)
   indexesCombinations <- parLapply(cl=Clust, X=possibleCombinations, fun=function(x, index) index[index$id %in% x,], index=index)
   # select only combinations of compatible indexes before searching for a solution
   if (selectCompIndexes) indexesCombinations <- indexesCombinations[parSapply(cl=Clust, X=indexesCombinations, FUN=areIndexesCompatible, minRedGreen=minRedGreen)]
@@ -32,13 +34,15 @@ generateListOfIndexesCombinations <- function(index, multiplexingRate, minRedGre
   return(indexesCombinations)
 }
 
-searchOneSolution <- function(indexesList, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, selectCompIndexes){
+searchOneSolution <- function(indexesList, index, nbLanes, multiplexingRate, unicityConstraint, minRedGreen, selectCompIndexes){
   # goal: look for a solution (i.e. a combination of combination of indexes) such that
   #  - each index is used only once if required (unicityConstraint = index)
   #  - each combination of indexes is used only once if required (unicityConstraint = lane)
+  # two steps:
+  #  1) fill the lanes with as many samples per lane as in indexesList (may be lower than multiplexingRate for optimization purposes)
+  #  2) if this number of lower than the desired multiplexing rate, complete the solution returned in 1) adding indexes
   # this function can return NULL if no solution is found (need to re-run in that case)
-  # indexesList is either the list of all the compatible indexes (selectCompIndexes) or all the possible combinations
-  nbLanes <- nbSamples/multiplexingRate
+  inputNbSamplesPerLane <- nrow(indexesList[[1]])
   compatibleCombinations <- vector(mode="list", length=nbLanes)
   k <- 1
   while (k <= nbLanes){
@@ -59,7 +63,26 @@ searchOneSolution <- function(indexesList, nbSamples, multiplexingRate, unicityC
       }
     }
   }
-  return(data.frame(sample=1:nbSamples, lane=rep(1:nbLanes, each=multiplexingRate), do.call("rbind", compatibleCombinations)))
+  solution <- data.frame(sample=1:(nbLanes*inputNbSamplesPerLane), lane=rep(1:nbLanes, each=inputNbSamplesPerLane), do.call("rbind", compatibleCombinations))
+  if (multiplexingRate > inputNbSamplesPerLane){
+    # only a partial solution has been found, need to complete it
+    solution <- completeSolution(solution, index, multiplexingRate, unicityConstraint)
+  }
+  return(solution)
+}
+
+completeSolution <- function(partialSolution, index, multiplexingRate, unicityConstraint){
+  nbSamplesToAdd <- multiplexingRate - nrow(partialSolution)/max(partialSolution$lane) # to each lane
+  for (l in unique(partialSolution$lane)){
+    if (unicityConstraint=="index") index <- index[!(index$id %in% partialSolution$id),]
+    if (nbSamplesToAdd > nrow(index)) return(NULL) # not enough remaining indexes to complete the solution
+    indexesToAdd <- index[sample(1:nrow(index), nbSamplesToAdd, FALSE),]
+    indexesToAdd$lane <- l
+    partialSolution <- rbind.data.frame(partialSolution[,c("lane","id","sequence")], indexesToAdd)
+  }
+  finalSolution <- data.frame(sample=1:nrow(partialSolution), partialSolution[order(partialSolution$lane, partialSolution$id),])
+  finalSolution$color <- gsub("G|T", "G", gsub("A|C", "R", finalSolution$sequence)) # A and C are red and G and T are green
+  return(finalSolution)
 }
 
 findSolution <- function(indexesList, index, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, nbMaxTrials, selectCompIndexes){
@@ -68,13 +91,12 @@ findSolution <- function(indexesList, index, nbSamples, multiplexingRate, unicit
   if (unicityConstraint=="index" & nbSamples > nrow(index)) stop("More samples than available indexes: cannot use each index only once.")
   if (nbSamples %% multiplexingRate != 0) stop("Number of samples must be a multiple of the multiplexing rate.")
   nbLanes <- nbSamples/multiplexingRate
-  if (selectCompIndexes & unicityConstraint!="none" & length(indexesList)<nbLanes){
+  if (selectCompIndexes & nrow(indexesList[[1]])==multiplexingRate & unicityConstraint!="none" & length(indexesList)<nbLanes){
     stop("There are only ", length(indexesList), " combinations of compatible indexes to fill ", nbLanes, " lanes. You can remove the index or lane unicity constraint.")
   }
-
   nbTrials <- 1
   while (nbTrials <= nbMaxTrials){
-    solution <- searchOneSolution(indexesList, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, selectCompIndexes)
+    solution <- searchOneSolution(indexesList, index, nbLanes, multiplexingRate, unicityConstraint, minRedGreen, selectCompIndexes)
     if (!is.null(solution)){
       checkProposedSolution(solution, unicityConstraint, minRedGreen)
       return(solution)
