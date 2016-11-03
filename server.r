@@ -32,6 +32,7 @@ shinyServer(function(input, output) {
       if (nbSamples <= 1) stop("Number of samples must be greater than 1.")
       mr <- 1:nbSamples
       choices <- mr[sapply(mr, function(x) nbSamples %% x == 0)]
+      choices <- choices[choices<=nrow(inputIndex())]
       selectInput("multiplexingRate", label="Multiplexing rate (i.e. number of samples per lane)", choices=choices, selected=choices[2])
     } else{
       ""
@@ -48,7 +49,6 @@ shinyServer(function(input, output) {
   })
   
   minRedGreen <- reactive({ifelse(is.null(input$minRedGreen), 1, as.numeric(input$minRedGreen))})
-  selectCompIndexes <- reactive({ifelse(is.null(input$minRedGreen), FALSE, input$selectCompIndexes)})
   nbMaxTrials <- reactive({ifelse(is.null(input$nbMaxTrials), 10, as.numeric(input$nbMaxTrials))})
   
   # list of input indexes
@@ -66,17 +66,8 @@ shinyServer(function(input, output) {
   
   # generate list of indexes
   generateList <- reactive({
-    generateListOfIndexesCombinations(inputIndex(), as.numeric(input$multiplexingRate), minRedGreen(), selectCompIndexes())
+    generateListOfIndexesCombinations(inputIndex(), as.numeric(input$multiplexingRate), minRedGreen())
   })
-  
-  textNbCompatibleIndexes <- eventReactive(input$go, {
-    if (is.null(input$multiplexingRate) | is.null(inputIndex()) | !selectCompIndexes() || as.numeric(input$multiplexingRate)!=nrow(generateList()[[1]])){
-      ""
-    } else{
-      paste("Among them", length(generateList()), "contain compatible indexes (i.e. at least", minRedGreen(), "red/green light(s) per position).")
-    }
-  })
-  output$textNbCompatibleIndexes <- renderText({textNbCompatibleIndexes()})
   
   textDescribingSolution <- eventReactive(input$go, {
     if (is.null(input$multiplexingRate) | is.null(inputIndex())){
@@ -96,10 +87,19 @@ shinyServer(function(input, output) {
                                   ifelse(input$unicityConstraint=="Use each combination only once", 
                                          "lane", "index"))
       return(findSolution(generateList(), inputIndex(), as.numeric(input$nbSamples), as.numeric(input$multiplexingRate), 
-                          unicityConstraint, minRedGreen(), nbMaxTrials(), selectCompIndexes()))
+                          unicityConstraint, minRedGreen(), nbMaxTrials()))
     }
   })
   output$solution <- renderDataTable({displaySolution()},options=list(paging=FALSE,searching=FALSE))
+  
+  textDescribingMinRedGreen <- eventReactive(input$go, {
+    if (is.null(displaySolution())){
+      ""
+    } else{
+      paste("Note: with this flowcell design there are more than", calculateFinalMinRedGreen(displaySolution()), "red/green lights at each position on each lane.")
+    }
+  })
+  output$textDescribingMinRedGreen <- renderText({textDescribingMinRedGreen()})
   
   output$downloadData <- downloadHandler(
     filename = "chosenIndexes.txt",
