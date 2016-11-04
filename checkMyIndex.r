@@ -39,10 +39,24 @@ option_list <- list(
               type="integer",
               default=1,
               dest="minRedGreen",
-              help="minimum number of red/green lights required at each position [default: %default]"),
+              help="minimum number of red and green lights required at each position [default: %default]"),
 
+  make_option(c("-c","--complete"),
+              type="logical",
+              default=FALSE,
+              action="store_true",
+              dest="completeLane",
+              help="directly look for a solution with the desired multiplexing rate instead of looking for a solution with a few samples per lane and add some of the remaining indexes to reach the desired multiplexing rate. [default: %default]"),
+  
+  make_option(c("-s","--selectCompIndexes"),
+              type="logical",
+              default=FALSE,
+              action="store_true",
+              dest="selectCompIndexes",
+              help="select compatible indexes before looking for a solution (can take some time but then speed up the algorithm) [default: %default]"),
+  
   make_option(c("-b","--nbMaxTrials"),
-              default=10000,
+              default=10,
               dest="nbMaxTrials", 
               help="maximum number of iterations to find a solution [default: %default]")
 )
@@ -59,6 +73,8 @@ nbSamples <- as.numeric(opt$nbSamples)
 unicityConstraint <- opt$unicityConstraint
 minRedGreen <- as.numeric(opt$minRedGreen)
 outputFile <- opt$outputFile
+completeLane <- as.logical(opt$completeLane)
+selectCompIndexes <- as.logical(opt$selectCompIndexes)
 nbMaxTrials <- as.numeric(opt$nbMaxTrials)
 
 source("global.r")
@@ -71,7 +87,7 @@ checkInputIndexes(index)
 if (nbSamples %% 1 != 0 || nbSamples <= 1) stop("\nNumber of samples must be an integer greater than 1.")
 if (nbSamples %% multiplexingRate != 0) stop("\nNumber of samples must be a multiple of the multiplexing rate.")
 if (multiplexingRate > nrow(index)) stop("\nMultiplexing rate can't be higher than the number of input indexes.")
-if (minRedGreen > multiplexingRate/2) stop("\nMinimal number of red/green lights per position can't be higher than the multiplexing rate divided by 2.")
+if (multiplexingRate > 1 & minRedGreen > multiplexingRate/2) stop("\nMinimal number of red/green lights per position can't be higher than the multiplexing rate divided by 2.")
 
 cat("--------------- Parameters ---------------\n")
 cat("Input file:", inputFile,"\n")
@@ -81,21 +97,34 @@ cat("Number of lanes:", nbLanes,"\n")
 cat("Constraint:", ifelse(unicityConstraint=="none","none",
                           ifelse(unicityConstraint=="lane", "use each combination of compatible indexes only once", 
                                  "use each index only once")),"\n")
-cat("Minimal number of red/green lights per position:", minRedGreen,"\n")
-cat("Output file:", outputFile,"\n")
+cat("Minimal number of red and green lights per position:", minRedGreen,"\n")
+cat("Directly look for complete lanes:", completeLane, "\n")
+cat("Select compatible indexes before looking for a solution:", selectCompIndexes, "\n")
 cat("Maximum number of iterations to find a solution:", nbMaxTrials,"\n")
+cat("Output file:", outputFile,"\n")
 cat("------------------------------------------\n")
 
 # how many possible combinations (combinatory logic using C^n_k)
 cat("\nIn the input list of", nrow(index), "indexes:", choose(n=nrow(index), k=multiplexingRate), "possible combinations of", multiplexingRate, "indexes (not necessarily compatible)\n")
 
 # generate the list of indexes
-indexesList <- generateListOfIndexesCombinations(index, multiplexingRate, minRedGreen)
+indexesList <- generateListOfIndexesCombinations(index, multiplexingRate, minRedGreen, completeLane, selectCompIndexes)
+
+# print the number of compatible combinations
+if (nrow(indexesList[[1]])==as.numeric(multiplexingRate) & selectCompIndexes){
+  cat("Among them", length(indexesList), "contain compatible indexes, i.e. there are at least", minRedGreen, "red/green light(s) at each position.\n")
+} else{
+  cat("Note: the number of combinations containing compatible indexes cannot be calculated with the parameters used.\n")
+}
 
 cat("Let's try to find a solution for", nbLanes, "lanes of", multiplexingRate, "samples using the specified parameters:\n\n")
-print(solution <- findSolution(indexesList, index, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, nbMaxTrials), row.names=FALSE)
+print(solution <- findSolution(indexesList, index, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, nbMaxTrials, completeLane, selectCompIndexes), row.names=FALSE)
 
-cat(paste("\nNote: with this flowcell design there are more than", calculateFinalMinRedGreen(solution), "red/green lights at each position on each lane."))
+if (multiplexingRate>1){
+  cat(paste("\nNote: with this design there are more than", calculateFinalMinRedGreen(solution), "red and green lights at each position on each lane."))
+} else{
+  cat("\nNote: minimal number of red/green lights per position has not been used as the multiplexing rate is equal to 1.")
+}
 
 if (!is.null(outputFile)){
   write.table(solution, outputFile, col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)

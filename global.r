@@ -19,10 +19,14 @@ areIndexesCompatible <- function(index, minRedGreen){
   return(all(sumRed >= minRedGreen & sumGreen >= minRedGreen))
 }
 
-generateListOfIndexesCombinations <- function(index, nbSamplesPerLane, minRedGreen, optimization=TRUE, selectCompIndexes=FALSE){
+generateListOfIndexesCombinations <- function(index, nbSamplesPerLane, minRedGreen, completeLane, selectCompIndexes){
   # optimize nbSamplesPerLane to generate less combinations of indexes
-  while (optimization & choose(nrow(index), nbSamplesPerLane)>1e5 & nbSamplesPerLane>2 & nbSamplesPerLane-1>=2*minRedGreen) nbSamplesPerLane <- nbSamplesPerLane - 1
-  if (choose(nrow(index), nbSamplesPerLane)>1e9) stop("Too many candidate combinations of indexes to easily find a solution, you can remove input indexes and/or reduce the multiplexing rate.")
+  while (!completeLane & choose(nrow(index), nbSamplesPerLane)>1e5 & nbSamplesPerLane>2 & nbSamplesPerLane-1>=2*minRedGreen){
+    nbSamplesPerLane <- nbSamplesPerLane - 1
+  }
+  if (choose(nrow(index), nbSamplesPerLane)>1e9){
+    stop("Too many candidate combinations of indexes to easily find a solution, please use different parameters.")
+  }
   index$color <- gsub("G|T", "G", gsub("A|C", "R", index$sequence)) # A and C are red and G and T are green
   # generate the list of all the possible combinations
   Clust=makeCluster(max(c(detectCores(logical=FALSE)-1, 1)))
@@ -84,12 +88,15 @@ completeSolution <- function(partialSolution, index, multiplexingRate, unicityCo
   return(finalSolution)
 }
 
-findSolution <- function(indexesList, index, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, nbMaxTrials){
+findSolution <- function(indexesList, index, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, nbMaxTrials, completeLane, selectCompIndexes){
   # this function run searchOneSolution() nbMaxTrials times until finding a solution based on the parameters defined
   if (!unicityConstraint %in% c("none","index","lane")) stop("unicityConstraint parameter must be equal to 'none', 'lane' or 'index'.")
   if (unicityConstraint=="index" & nbSamples > nrow(index)) stop("More samples than available indexes: cannot use each index only once.")
   if (nbSamples %% multiplexingRate != 0) stop("Number of samples must be a multiple of the multiplexing rate.")
   nbLanes <- nbSamples/multiplexingRate
+  if (unicityConstraint!="none" & completeLane & selectCompIndexes & length(indexesList) < nbLanes){
+    stop("There are only ", length(indexesList), " combinations of compatible indexes to fill ", nbLanes, " lanes.")
+  }
   nbTrials <- 1
   while (nbTrials <= nbMaxTrials){
     solution <- searchOneSolution(indexesList, index, nbLanes, multiplexingRate, unicityConstraint, minRedGreen)

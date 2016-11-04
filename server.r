@@ -42,14 +42,11 @@ shinyServer(function(input, output) {
   output$minRedGreen <- renderUI({
     if (!is.null(input$multiplexingRate)){
       maxRedGreen <- max(trunc(as.numeric(input$multiplexingRate)/2), 1)
-      selectInput("minRedGreen", label="Minimal number of red/green lights per position", choices=1:maxRedGreen, selected=1)
+      selectInput("minRedGreen", label="Minimal number of red and green lights per position", choices=1:maxRedGreen, selected=1)
     } else{
       ""
     }
   })
-  
-  minRedGreen <- reactive({ifelse(is.null(input$minRedGreen), 1, as.numeric(input$minRedGreen))})
-  nbMaxTrials <- reactive({ifelse(is.null(input$nbMaxTrials), 10, as.numeric(input$nbMaxTrials))})
   
   # list of input indexes
   output$inputIndex <- renderDataTable({inputIndex()},options=list(paging=FALSE,searching=FALSE))
@@ -66,8 +63,22 @@ shinyServer(function(input, output) {
   
   # generate list of indexes
   generateList <- reactive({
-    generateListOfIndexesCombinations(inputIndex(), as.numeric(input$multiplexingRate), minRedGreen())
+    generateListOfIndexesCombinations(inputIndex(), as.numeric(input$multiplexingRate), as.numeric(input$minRedGreen), input$completeLane, input$selectCompIndexes)
   })
+  
+  # number of compatible combinations of indexes
+  textNbCompCombinations <- eventReactive(input$go, {
+    if (is.null(inputIndex()) | is.null(input$multiplexingRate)){
+      ""
+    } else{
+      if (nrow(generateList()[[1]])==as.numeric(input$multiplexingRate) & input$selectCompIndexes){
+        paste("Among them", length(generateList()), "contain compatible indexes, i.e. there are at least", as.numeric(input$minRedGreen), "red/green light(s) at each position.")
+      } else{
+        paste("Note: the number of combinations containing compatible indexes cannot be calculated with the parameters used.")
+      }
+    }
+  })
+  output$textNbCompCombinations <- renderText({textNbCompCombinations()})
   
   textDescribingSolution <- eventReactive(input$go, {
     if (is.null(input$multiplexingRate) | is.null(inputIndex())){
@@ -87,16 +98,22 @@ shinyServer(function(input, output) {
                                   ifelse(input$unicityConstraint=="Use each combination only once", 
                                          "lane", "index"))
       return(findSolution(generateList(), inputIndex(), as.numeric(input$nbSamples), as.numeric(input$multiplexingRate), 
-                          unicityConstraint, minRedGreen(), nbMaxTrials()))
+                          unicityConstraint, as.numeric(input$minRedGreen), as.numeric(input$nbMaxTrials), 
+                          input$completeLane, input$selectCompIndexes))
     }
   })
-  output$solution <- renderDataTable({displaySolution()},options=list(paging=FALSE,searching=FALSE))
+  output$solution <- renderDataTable({displaySolution()}, options=list(paging=FALSE, searching=FALSE))
   
   textDescribingMinRedGreen <- eventReactive(input$go, {
-    if (is.null(displaySolution())){
-      ""
+    isSolution <- tryCatch({displaySolution()}, error=function(e) NULL)
+    if (is.null(isSolution)){
+    ""
     } else{
-      paste("Note: with this flowcell design there are more than", calculateFinalMinRedGreen(displaySolution()), "red/green lights at each position on each lane.")
+      if (as.numeric(input$multiplexingRate)>1){
+        paste("Note: with this flowcell design there are more than", calculateFinalMinRedGreen(displaySolution()), "red/green lights at each position on each lane.")
+      } else{
+        paste("Note: minimal number of red/green lights per position has not been used as the multiplexing rate is equal to 1.")
+      }
     }
   })
   output$textDescribingMinRedGreen <- renderText({textDescribingMinRedGreen()})
