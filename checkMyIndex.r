@@ -1,9 +1,9 @@
 #! /usr/bin/Rscript
 
-# Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -n 8 -m 2 -u
+# Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -n 8 -m 2
 # Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -n 6 -m 2 -u index
 # Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -n 12 -m 3 -u lane
-# Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -n 24 -m 4 -u index -b 20
+# Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -n 24 -m 4 -u index
 
 library(optparse)
 
@@ -39,14 +39,14 @@ option_list <- list(
               type="integer",
               default=1,
               dest="minRedGreen",
-              help="minimum number of red and green lights required at each position [default: %default]"),
+              help="minimal number of red and green lights required at each position (note: increasing this number can slow down the algorithm) [default: %default]"),
 
   make_option(c("-c","--complete"),
               type="logical",
               default=FALSE,
               action="store_true",
               dest="completeLane",
-              help="directly look for a solution with the desired multiplexing rate instead of looking for a solution with a few samples per lane and add some of the remaining indexes to reach the desired multiplexing rate. [default: %default]"),
+              help="directly look for a solution with the desired multiplexing rate instead of looking for a solution with a few samples per lane and add some of the remaining indexes to reach the desired multiplexing rate [default: %default]"),
   
   make_option(c("-s","--selectCompIndexes"),
               type="logical",
@@ -61,9 +61,23 @@ option_list <- list(
               help="maximum number of iterations to find a solution [default: %default]")
 )
 
+description <- c("Search for a set of compatible indexes for your sequencing experiment.
+
+There can be many combinations of indexes to check according to the number of input indexes and the multiplexing rate.
+Thus, testing for the compatibility of all the combinations may be long or even impossible. The trick is to find a partial
+solution with the desired number of lanes but with a lower multiplexing rate and then to complete each lane with some of
+the remaining indexes to reach the desired multiplexing rate. Indeed, adding indexes to a combination of compatible indexes
+will give a compatible combination for sure. Briefly, a lower multiplexing rate generates a lower number of combinations
+to test and thus make the research of a partial solution very fast. Adding some indexes to complete each lane is fast too
+and give the final solution.
+
+Unfortunately, the research of a final solution might become impossible as the astuteness reduces the number of combinations
+of indexes. In such a case, one can look for a solution using directly the desired multiplexing rate (see parameters),
+the only risk is to increase the computational time.")
+
 parser <- OptionParser(usage="usage: %prog [options]",
                        option_list=option_list, 
-                       description="Search for a set of compatible indexes for your sequencing experiment.",
+                       description=description,
                        epilogue="For comments, suggestions, bug reports etc... please contact Hugo Varet <hugo.varet@pasteur.fr>")
 opt <- parse_args(parser, args=commandArgs(trailingOnly=TRUE), positional_arguments=0)$options
 
@@ -87,7 +101,7 @@ checkInputIndexes(index)
 if (nbSamples %% 1 != 0 || nbSamples <= 1) stop("\nNumber of samples must be an integer greater than 1.")
 if (nbSamples %% multiplexingRate != 0) stop("\nNumber of samples must be a multiple of the multiplexing rate.")
 if (multiplexingRate > nrow(index)) stop("\nMultiplexing rate can't be higher than the number of input indexes.")
-if (multiplexingRate > 1 & minRedGreen > multiplexingRate/2) stop("\nMinimal number of red/green lights per position can't be higher than the multiplexing rate divided by 2.")
+if (multiplexingRate > 1 & minRedGreen > multiplexingRate/2) stop("\nMinimal number of red and green lights per position can't be higher than the multiplexing rate divided by 2.")
 
 cat("--------------- Parameters ---------------\n")
 cat("Input file:", inputFile,"\n")
@@ -112,7 +126,7 @@ indexesList <- generateListOfIndexesCombinations(index, multiplexingRate, minRed
 
 # print the number of compatible combinations
 if (nrow(indexesList[[1]])==as.numeric(multiplexingRate) & selectCompIndexes){
-  cat("Among them", length(indexesList), "contain compatible indexes, i.e. there are at least", minRedGreen, "red/green light(s) at each position.\n")
+  cat("Among them", length(indexesList), "contain compatible indexes, i.e. there are at least", minRedGreen, "red and green light(s) at each position.\n")
 } else{
   cat("Note: the number of combinations containing compatible indexes cannot be calculated with the parameters used.\n")
 }
@@ -120,10 +134,11 @@ if (nrow(indexesList[[1]])==as.numeric(multiplexingRate) & selectCompIndexes){
 cat("Let's try to find a solution for", nbLanes, "lanes of", multiplexingRate, "samples using the specified parameters:\n\n")
 print(solution <- findSolution(indexesList, index, nbSamples, multiplexingRate, unicityConstraint, minRedGreen, nbMaxTrials, completeLane, selectCompIndexes), row.names=FALSE)
 
+# print the minimal number of red and green lights at each position on each lane
 if (multiplexingRate>1){
   cat(paste("\nNote: with this design there are more than", calculateFinalMinRedGreen(solution), "red and green lights at each position on each lane."))
 } else{
-  cat("\nNote: minimal number of red/green lights per position has not been used as the multiplexing rate is equal to 1.")
+  cat("\nNote: minimal number of red and green lights per position has not been used as the multiplexing rate is equal to 1.")
 }
 
 if (!is.null(outputFile)){

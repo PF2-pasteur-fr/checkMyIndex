@@ -76,12 +76,14 @@ searchOneSolution <- function(indexesList, index, nbLanes, multiplexingRate, uni
 
 completeSolution <- function(partialSolution, index, multiplexingRate, unicityConstraint){
   nbSamplesToAdd <- multiplexingRate - nrow(partialSolution)/max(partialSolution$lane) # to each lane
+  index2 <- index
   for (l in unique(partialSolution$lane)){
-    if (unicityConstraint=="index") index <- index[!(index$id %in% partialSolution$id),]
-    if (nbSamplesToAdd > nrow(index)) return(NULL) # not enough remaining indexes to complete the solution
-    indexesToAdd <- index[sample(1:nrow(index), nbSamplesToAdd, FALSE),]
+    if (unicityConstraint!="none") index2 <- index2[!(index2$id %in% partialSolution$id),]
+    if (nbSamplesToAdd > nrow(index2)) return(NULL) # not enough remaining indexes to complete the solution
+    indexesToAdd <- index2[sample(1:nrow(index2), nbSamplesToAdd, FALSE),]
     indexesToAdd$lane <- l
     partialSolution <- rbind.data.frame(partialSolution[,c("lane","id","sequence")], indexesToAdd)
+    if (unicityConstraint=="lane") index2 <- index
   }
   finalSolution <- data.frame(sample=1:nrow(partialSolution), partialSolution[order(partialSolution$lane, partialSolution$id),])
   finalSolution$color <- gsub("G|T", "G", gsub("A|C", "R", finalSolution$sequence)) # A and C are red and G and T are green
@@ -113,13 +115,15 @@ findSolution <- function(indexesList, index, nbSamples, multiplexingRate, unicit
 checkProposedSolution <- function(solution, unicityConstraint, minRedGreen){
   # indexes not unique
   err1 <- unicityConstraint=="index" & any(duplicated(solution$id))
+  # indexes not unique within a lane
+  err2 <- any(sapply(split(solution$id, solution$lane), function(x) any(duplicated(x))))
   # several lanes with the same combination of indexes
-  err2 <- unicityConstraint=="lane" & any(duplicated(split(solution$id, solution$lane)))
+  err3 <- unicityConstraint=="lane" & any(duplicated(split(solution$id, solution$lane)))
   # different number of samples on the lanes
-  err3 <- length(table(table(solution$lane)))>1
+  err4 <- length(table(table(solution$lane)))>1
   # indexes not compatible on at least one lane
-  err4 <- any(!sapply(split(solution, solution$lane), areIndexesCompatible, minRedGreen))
-  err <- c(err1, err2, err3, err4)
+  err5 <- any(!sapply(split(solution, solution$lane), areIndexesCompatible, minRedGreen))
+  err <- c(err1, err2, err3, err4, err5)
   if (any(err)){
     stop("The solution proposed by the algorithm does not satisfy the constraints (",
          paste(paste0("err", 1:length(err))[err], collapse=", "), 

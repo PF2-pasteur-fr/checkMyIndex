@@ -47,23 +47,24 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                  p("There can be many combinations of indexes to check according to the number of input indexes and the multiplexing rate. Thus, testing for 
                                     the compatibility of all the combinations may be long or even impossible. The trick is to find a partial solution with the desired number 
                                     of lanes but with a lower multiplexing rate and then to complete each lane with some of the remaining indexes to reach the desired multiplexing 
-                                    rate (if N indexes are compatibles then the same N indexes + 1 are compatible). Briefly, a lower multiplexing rate generates a lower number of 
-                                    combinations to test and thus make the research of a partial solution very fast. Adding some indexes to each lane to reach the speficied
-                                    multiplexing rate is fast too."),
+                                    rate. Indeed, adding indexes to a combination of compatible indexes will give a compatible combination for sure. Briefly, a lower multiplexing 
+                                    rate generates a lower number of combinations to test and thus make the research of a partial solution very fast. Adding some indexes to complete 
+                                    each lane is fast too and give the final solution."),
                                  p("Unfortunately, the research of a final solution might become impossible as the astuteness reduces the number of combinations of indexes.
-                                    Note that one can look for a solution using directly the desired multiplexing rate (see parameters), the only risk being to increase 
+                                    In such a case, one can look for a solution using directly the desired multiplexing rate (see parameters), the only risk is to increase 
                                     the computational time."),
                                  
                                  h3("Parameters"),
                                  p(strong("Total number of samples"), "in your experiment (can be greater than the number of available indexes)."),
                                  p(strong("Multiplexing rate"), "i.e. number of samples per lane (only divisors of the total number of samples are proposed)."),
                                  p(strong("Constraint on the indexes"), "to avoid having two samples or two lanes with the same index(es)."),
-                                 p(strong("Minimal number of red and green lights"), "required at each position is equal to 1 by default to have compatible indexes but can be increased."),
-                                 p(strong("Directly look for a solution with the desired multiplexing rate"), "instead of looking for a solution with a few samples per lane and add 
-                                           some of the remaining indexes to reach the desired multiplexing rate."),
-                                 p(strong("Select compatible indexes"), "before looking for a solution can take some time but then speed up the algorithm. 
-                                           It also gives the possibility to get the number of compatible combinations of indexes if the algorithm directly 
-                                           look for a solution with the desired multiplexing rate."),
+                                 p(strong("Minimal number of red and green lights"), "required at each position is equal to 1 by default to have compatible indexes but can be increased 
+                                           (note: increasing this number can slow down the algorithm)."),
+                                 p(strong("Directly look for a solution with the desired multiplexing rate"), "instead of looking for a partial solution with a few samples per lane 
+                                           and then add some of the remaining indexes to reach the desired multiplexing rate."),
+                                 p(strong("Select compatible indexes"), "before looking for a (partial) solution can take some time but then speed up the algorithm. 
+                                           If one looks for a solution directly with the desired multiplexing rate, turning on this options allows to get the number of 
+                                           compatible combinations of indexes."),
                                  p(strong("Maximum number of trials"), "can be increased if a solution is difficult to find with the parameters chosen."),
 
                                  h3("About"),
