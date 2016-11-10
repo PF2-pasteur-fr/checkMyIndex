@@ -76,23 +76,18 @@ searchOneSolution <- function(indexesList, index, nbLanes, multiplexingRate, uni
 
 completeSolution <- function(partialSolution, index, multiplexingRate, unicityConstraint){
   nbSamplesToAdd <- multiplexingRate - nrow(partialSolution)/max(partialSolution$lane) # to each lane
-  index2 <- index
   for (l in unique(partialSolution$lane)){
     if (unicityConstraint=="index"){
       # remove all the indexes already used
-      index2 <- index2[!(index2$id %in% partialSolution$id),]
+      index2 <- index[!(index$id %in% partialSolution$id),]
     } else{
       # remove the indexes already used in the current lane
-      index2 <- index2[!(index2$id %in% partialSolution$id[partialSolution$lane==l]),]
+      index2 <- index[!(index$id %in% partialSolution$id[partialSolution$lane==l]),]
     }
     if (nbSamplesToAdd > nrow(index2)) return(NULL) # not enough remaining indexes to complete the solution
     indexesToAdd <- index2[sample(1:nrow(index2), nbSamplesToAdd, FALSE),]
     indexesToAdd$lane <- l
     partialSolution <- rbind.data.frame(partialSolution[,c("lane","id","sequence")], indexesToAdd)
-    if (unicityConstraint!="index"){
-      # reset the candidate indexes to be added
-      index2 <- index
-    }
   }
   finalSolution <- data.frame(sample=1:nrow(partialSolution), partialSolution[order(partialSolution$lane, partialSolution$id),])
   finalSolution$color <- gsub("G|T", "G", gsub("A|C", "R", finalSolution$sequence)) # A and C are red and G and T are green
@@ -123,21 +118,15 @@ findSolution <- function(indexesList, index, nbSamples, multiplexingRate, unicit
 
 checkProposedSolution <- function(solution, unicityConstraint, minRedGreen){
   # indexes not unique
-  err1 <- unicityConstraint=="index" & any(duplicated(solution$id))
+  if (unicityConstraint=="index" & any(duplicated(solution$id))) stop("The solution proposed uses some indexes several times. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
   # indexes not unique within a lane
-  err2 <- any(sapply(split(solution$id, solution$lane), function(x) any(duplicated(x))))
+  if (any(sapply(split(solution$id, solution$lane), function(x) any(duplicated(x))))) stop("The solution proposed uses some indexes several times within a lane. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
   # several lanes with the same combination of indexes
-  err3 <- unicityConstraint=="lane" & any(duplicated(split(solution$id, solution$lane)))
+  if (unicityConstraint=="lane" & any(duplicated(split(solution$id, solution$lane)))) stop("The solution proposed uses some combinations of indexes several times. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
   # different number of samples on the lanes
-  err4 <- length(table(table(solution$lane)))>1
+  if (length(table(table(solution$lane)))>1) stop("The solution proposed uses different numbers of samples per lane. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
   # indexes not compatible on at least one lane
-  err5 <- any(!sapply(split(solution, solution$lane), areIndexesCompatible, minRedGreen))
-  err <- c(err1, err2, err3, err4, err5)
-  if (any(err)){
-    stop("The solution proposed by the algorithm does not satisfy the constraints (",
-         paste(paste0("err", 1:length(err))[err], collapse=", "), 
-         "). Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
-  }
+  if (any(!sapply(split(solution, solution$lane), areIndexesCompatible, minRedGreen))) stop("The solution proposed uses incompatible indexes. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
 }
 
 calculateFinalMinRedGreen <- function(solution){
