@@ -15,7 +15,7 @@ The list of the available indexes must be stored in a text file containing two t
 
 ### Public website
 
-Click [here](http://shiny01.hosting.pasteur.fr/checkMyIndex/) to use the shiny interface of *checkMyIndex*.
+Click [here](https://checkmyindex.pasteur.fr/) to use the shiny interface of *checkMyIndex*.
 
 ### Locally
 
