@@ -59,4 +59,4 @@ One can install each of these packages running `install.packages(packageName)` i
 
 ## About checkMyIndex
 
-This tool has been developed at the Transcriptome & Epigenome Platform of the Biomics pole by Hugo Varet (<hugo.varet@pasteur.fr>).
+This tool has been developed at the Transcriptome & Epigenome Platform of the Biomics pole by Hugo Varet (<hugo.varet@pasteur.fr>). Please note that *checkMyIndex* is provided without any guarantees as to its accuracy.

@@ -70,7 +70,8 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                  h3("About"),
                                  p("This application has been developed at the Transcriptome & Epigenome Platform of the Biomics pole by Hugo Varet. Feel free to send an e-mail to", 
                                    a("hugo.varet@pasteur.fr"), "for any suggestion or bug report."),
-                                 p("Source code and instructions to run it locally are available on", a("GitHub", href="https://github.com/PF2-pasteur-fr/checkMyIndex"), "."))
+                                 p("Source code and instructions to run it locally are available on", a("GitHub", href="https://github.com/PF2-pasteur-fr/checkMyIndex"), ". 
+                                   Please note that checkMyIndex is provided without any guarantees as to its accuracy."))
                         
                       )
                     )
