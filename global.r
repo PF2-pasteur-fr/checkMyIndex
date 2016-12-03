@@ -138,3 +138,38 @@ calculateFinalMinRedGreen <- function(solution){
   }
   min(sapply(split(solution, solution$lane), tmpfun))
 }
+
+heatmapindex <- function(solution){
+  splitsol <- split(solution, solution$lane)
+  # build a matrix containing the index bases
+  seqmat <- lapply(splitsol, function(sol) matrix(unlist(strsplit(sol$sequence, "")), nrow=nrow(sol), byrow=TRUE))
+  seqmat <- do.call("rbind", lapply(seqmat, function(x) rbind(x, rep(NA, ncol(x)))))
+  seqmat <- seqmat[-nrow(seqmat),]
+  # build a matrix containing the colors
+  seqcol <- lapply(splitsol, function(sol) matrix(unlist(strsplit(sol$color, "")), nrow=nrow(sol), byrow=TRUE))
+  seqcol <- do.call("rbind", lapply(seqcol, function(x) rbind(x, rep(NA, ncol(x)))))
+  seqcol <- seqcol[-nrow(seqcol),]
+  # plot
+  par(mar=c(2, 6, 0, 6) + 0.1, xpd=TRUE, xaxs="i", yaxs="i")
+  plot.new()
+  plot.window(xlim=c(-1.5, ncol(seqmat)+1.5), ylim=c(-2, nrow(seqmat)))
+  for (i in 1:nrow(seqmat)){
+    for (j in 1:ncol(seqmat)){
+      rect(xleft=j-1, ybottom=nrow(seqmat)-(i-1), xright=j, ytop=nrow(seqmat)-i, 
+           col=ifelse(seqcol[i,j]=="R", "orangered3", "forestgreen"),
+           border=ifelse(seqcol[i,j]=="R", "orangered3", "seagreen4"))
+      text(x=j-0.5, y=nrow(seqmat)-(i-0.5), labels=seqmat[i,j])
+    }
+  }
+  # print positions
+  text(x=1:ncol(seqmat)-0.5, y=-0.75, labels=1:ncol(seqmat))
+  text(x=mean(1:ncol(seqmat))-0.5, y=-2, labels="Position")
+  # extract and print sample ids
+  tmp <- unlist(lapply(splitsol, function(sol) c(sol$sample, NA)))
+  text(x=-0.25, y=nrow(seqmat):1 - 0.5, labels=tmp[-length(tmp)], pos=2)
+  text(x=-1.5, y=nrow(seqmat)/2, labels="Sample", srt=90)
+  # extract and print index ids
+  tmp <- unlist(lapply(splitsol, function(sol) c(sol$id, NA)))
+  text(x=ncol(seqmat)+0.25, y=nrow(seqmat):1 - 0.5, labels=tmp[-length(tmp)], pos=4)
+  text(x=ncol(seqmat)+1.5, y=nrow(seqmat)/2, labels="Index", srt=90)
+}

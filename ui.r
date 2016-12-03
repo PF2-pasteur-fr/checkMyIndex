@@ -35,7 +35,11 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                  br(""),
                                  downloadButton("downloadData", "Download")),
                         
-                        # 3rd panel: help
+                        # 3rd panel: plot results
+                        tabPanel("Visualization of the design",
+                                 uiOutput("heatmapindex2")),
+                        
+                        # 4th panel: help
                         tabPanel("Help",
                                  
                                  h3("Input indexes file"),

@@ -104,6 +104,12 @@ shinyServer(function(input, output) {
   })
   output$solution <- renderDataTable({displaySolution()}, options=list(paging=FALSE, searching=FALSE))
   
+  getNbSamples <- eventReactive(input$go, {nrow(displaySolution())})
+  output$heatmapindex <- renderPlot({heatmapindex(displaySolution())}, res=100)
+  output$heatmapindex2 <- renderUI({
+    plotOutput("heatmapindex", width=1000, height=200+20*getNbSamples())
+  })
+  
   textDescribingMinRedGreen <- eventReactive(input$go, {
     isSolution <- tryCatch({displaySolution()}, error=function(e) NULL)
     if (is.null(isSolution)){
