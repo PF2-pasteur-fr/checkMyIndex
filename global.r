@@ -150,14 +150,14 @@ heatmapindex <- function(solution){
   seqcol <- do.call("rbind", lapply(seqcol, function(x) rbind(x, rep(NA, ncol(x)))))
   seqcol <- seqcol[-nrow(seqcol),]
   # plot
-  par(mar=c(2, 6, 0, 6) + 0.1, xpd=TRUE, xaxs="i", yaxs="i")
+  par(mar=c(2, 6, 1, 6) + 0.1, xpd=TRUE, xaxs="i", yaxs="i")
   plot.new()
   plot.window(xlim=c(-1.5, ncol(seqmat)+1.5), ylim=c(-2, nrow(seqmat)))
   for (i in 1:nrow(seqmat)){
     for (j in 1:ncol(seqmat)){
       rect(xleft=j-1, ybottom=nrow(seqmat)-(i-1), xright=j, ytop=nrow(seqmat)-i, 
-           col=ifelse(seqcol[i,j]=="R", "orangered3", "forestgreen"),
-           border=ifelse(seqcol[i,j]=="R", "orangered3", "seagreen4"))
+           col=ifelse(seqcol[i,j]=="R", "orangered", "darkseagreen4"),
+           border=ifelse(seqcol[i,j]=="R", "orangered", "darkseagreen4"))
       text(x=j-0.5, y=nrow(seqmat)-(i-0.5), labels=seqmat[i,j])
     }
   }

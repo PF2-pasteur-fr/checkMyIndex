@@ -1,8 +1,8 @@
 library(shiny)
 
 shinyUI(fluidPage(theme = "bootstrap.min.css",
-                  
-                  titlePanel("Search for a set of compatible indexes for your sequencing experiment"),
+
+                  titlePanel(title=div(img(src="dna.png", width=50), strong("Search for a set of compatible indexes for your sequencing experiment")), windowTitle="checkMyIndex"),
                   
                   sidebarLayout(
                     
@@ -21,6 +21,7 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                     
                     # output
                     mainPanel(
+                      
                       tabsetPanel(
                         # 1st panel: input
                         tabPanel("Input indexes", dataTableOutput("inputIndex")),
@@ -75,7 +76,8 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                  p("This application has been developed at the Transcriptome & Epigenome Platform of the Biomics pole by Hugo Varet. Feel free to send an e-mail to", 
                                    a("hugo.varet@pasteur.fr"), "for any suggestion or bug report."),
                                  p("Source code and instructions to run it locally are available on", a("GitHub", href="https://github.com/PF2-pasteur-fr/checkMyIndex"), ". 
-                                   Please note that checkMyIndex is provided without any guarantees as to its accuracy."))
+                                   Please note that checkMyIndex is provided without any guarantees as to its accuracy."),
+                                 div(img(src="logo_c3bi_citech.jpg", width=300), style="text-align: center;"))
                         
                       )
                     )

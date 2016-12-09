@@ -1,6 +1,7 @@
 library(shiny)
 
-options(shiny.maxRequestSize = 5*1024^2) # limit size for the input file to upload (5Mo here)
+options(shiny.sanitize.errors = FALSE,   # to display informative error messages
+        shiny.maxRequestSize = 5*1024^2) # limit size for the input file to upload (5Mo here)
 
 shinyServer(function(input, output) {
   
@@ -105,9 +106,9 @@ shinyServer(function(input, output) {
   output$solution <- renderDataTable({displaySolution()}, options=list(paging=FALSE, searching=FALSE))
   
   getNbSamples <- eventReactive(input$go, {nrow(displaySolution())})
-  output$heatmapindex <- renderPlot({heatmapindex(displaySolution())}, res=100)
+  output$heatmapindex <- renderPlot({heatmapindex(displaySolution())}, res=90)
   output$heatmapindex2 <- renderUI({
-    plotOutput("heatmapindex", width=1000, height=200+20*getNbSamples())
+    plotOutput("heatmapindex", width=900, height=220+20*getNbSamples())
   })
   
   textDescribingMinRedGreen <- eventReactive(input$go, {
