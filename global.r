@@ -20,7 +20,7 @@ areIndexesCompatible <- function(index, minRedGreen){
 }
 
 generateListOfIndexesCombinations <- function(index, nbSamplesPerLane, minRedGreen, completeLane, selectCompIndexes){
-  # optimize nbSamplesPerLane to generate less combinations of indexes
+  # optimize nbSamplesPerLane to generate a reduced number of combinations of indexes
   while (!completeLane & choose(nrow(index), nbSamplesPerLane)>1e5 & nbSamplesPerLane>2 & nbSamplesPerLane-1>=2*minRedGreen){
     nbSamplesPerLane <- nbSamplesPerLane - 1
   }
@@ -29,7 +29,7 @@ generateListOfIndexesCombinations <- function(index, nbSamplesPerLane, minRedGre
   }
   index$color <- gsub("G|T", "G", gsub("A|C", "R", index$sequence)) # A and C are red and G and T are green
   # generate the list of all the possible combinations
-  Clust=makeCluster(max(c(detectCores(logical=FALSE)-1, 1)))
+  Clust <- makeCluster(max(c(detectCores(logical=FALSE)-1, 1)))
   possibleCombinations <- combn(x=index$id, m=nbSamplesPerLane, simplify=FALSE)
   indexesCombinations <- parLapply(cl=Clust, X=possibleCombinations, fun=function(x, index) index[index$id %in% x,], index=index)
   # select only combinations of compatible indexes before searching for a solution
@@ -118,20 +118,30 @@ findSolution <- function(indexesList, index, nbSamples, multiplexingRate, unicit
 
 checkProposedSolution <- function(solution, unicityConstraint, minRedGreen){
   # indexes not unique
-  if (unicityConstraint=="index" & any(duplicated(solution$id))) stop("The solution proposed uses some indexes several times. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  if (unicityConstraint=="index" & any(duplicated(solution$id))){
+    stop("The solution proposed uses some indexes several times. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  }
   # indexes not unique within a lane
-  if (any(sapply(split(solution$id, solution$lane), function(x) any(duplicated(x))))) stop("The solution proposed uses some indexes several times within a lane. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  if (any(sapply(split(solution$id, solution$lane), function(x) any(duplicated(x))))){
+    stop("The solution proposed uses some indexes several times within a lane. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  }
   # several lanes with the same combination of indexes
-  if (unicityConstraint=="lane" & any(duplicated(split(solution$id, solution$lane)))) stop("The solution proposed uses some combinations of indexes several times. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  if (unicityConstraint=="lane" & any(duplicated(split(solution$id, solution$lane)))){
+    stop("The solution proposed uses some combinations of indexes several times. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  }
   # different number of samples on the lanes
-  if (length(table(table(solution$lane)))>1) stop("The solution proposed uses different numbers of samples per lane. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  if (length(table(table(solution$lane)))>1){
+    stop("The solution proposed uses different numbers of samples per lane. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  }
   # indexes not compatible on at least one lane
-  if (any(!sapply(split(solution, solution$lane), areIndexesCompatible, minRedGreen))) stop("The solution proposed uses incompatible indexes. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  if (any(!sapply(split(solution, solution$lane), areIndexesCompatible, minRedGreen))){
+    stop("The solution proposed uses incompatible indexes. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  }
 }
 
 calculateFinalMinRedGreen <- function(solution){
   tmpfun <- function(solution.lane){
-    matColors <- matrix(unlist(sapply(solution.lane$color, strsplit, "")), byrow=TRUE, nrow=nrow(solution.lane))
+    matColors <- do.call("rbind", strsplit(solution.lane$color, ""))
     sumRed <- apply(matColors, 2, function(x) sum(x=="R"))
     sumGreen <- nrow(matColors) - sumRed
     return(min(c(sumRed, sumGreen)))
@@ -141,13 +151,13 @@ calculateFinalMinRedGreen <- function(solution){
 
 heatmapindex <- function(solution){
   splitsol <- split(solution, solution$lane)
-  # build a matrix containing the index bases
-  seqmat <- lapply(splitsol, function(sol) matrix(unlist(strsplit(sol$sequence, "")), nrow=nrow(sol), byrow=TRUE))
-  seqmat <- do.call("rbind", lapply(seqmat, function(x) rbind(x, rep(NA, ncol(x)))))
+  # build a matrix containing the index bases and NAs to separate the lanes
+  seqmat <- lapply(splitsol, function(splitsol.lane) do.call("rbind", strsplit(splitsol.lane$sequence, "")))
+  seqmat <- do.call("rbind", lapply(seqmat, function(seqmat.lane) rbind(seqmat.lane, rep(NA, ncol(seqmat.lane)))))
   seqmat <- seqmat[-nrow(seqmat),]
-  # build a matrix containing the colors
-  seqcol <- lapply(splitsol, function(sol) matrix(unlist(strsplit(sol$color, "")), nrow=nrow(sol), byrow=TRUE))
-  seqcol <- do.call("rbind", lapply(seqcol, function(x) rbind(x, rep(NA, ncol(x)))))
+  # build a matrix containing the colors and NAs to separate the lanes
+  seqcol <- lapply(splitsol, function(splitsol.lane) do.call("rbind", strsplit(splitsol.lane$color, "")))
+  seqcol <- do.call("rbind", lapply(seqcol, function(seqcol.lane) rbind(seqcol.lane, rep(NA, ncol(seqcol.lane)))))
   seqcol <- seqcol[-nrow(seqcol),]
   # plot
   par(mar=c(2, 6, 1, 6) + 0.1, xpd=TRUE, xaxs="i", yaxs="i")
