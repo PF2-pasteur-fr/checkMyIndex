@@ -13,7 +13,7 @@ checkInputIndexes <- function(index){
 areIndexesCompatible <- function(index, minRedGreen){
   # return TRUE if the input indexes are compatible (i.e. can be used within the same lane)
   if (nrow(index)==1) return(TRUE)
-  matColors <- matrix(unlist(sapply(index$color, strsplit, "")), byrow=TRUE, nrow=nrow(index))
+  matColors <- do.call("rbind", strsplit(index$color, ""))
   sumRed <- apply(matColors, 2, function(x) sum(x=="R"))
   sumGreen <- nrow(matColors) - sumRed
   return(all(sumRed >= minRedGreen & sumGreen >= minRedGreen))
