@@ -3,7 +3,7 @@
 Search for a set of compatible indexes for your sequencing experiment according to:
 
 * the number of samples
-* the desired multiplexing rate (i.e. number of samples per lane)
+* the desired multiplexing rate (i.e. number of samples per pool/lane)
 * the constraint on the indexes (none, use each one or each combination only once)
 * the minimum number of red/green lights required at each position
 
@@ -29,17 +29,17 @@ One can use the application locally running the two following lines in R:
 
 *checkMyIndex* can be executed calling `checkMyIndex.r` with `Rscript`. As `checkMyIndex.r` sources `global.r`, both files must be placed in the same directory. Here are 3 examples using the input example file `inputIndexesExample.txt`:
 
-* List of 9 indexes for 9 samples distributed on 3 lanes:
+* List of 9 indexes for 9 samples distributed on 3 lanes with the four-channel Illumina chemistry:
 
-`Rscript checkMyIndex.r -i inputIndexesExample.txt -n 9 -m 3`
+`Rscript checkMyIndex.r -i inputIndexesExample.txt -C 4 -n 9 -m 3`
 
-* List of 12 indexes for 12 samples distributed on 4 lanes using each lane combination only once:
+* List of 12 indexes for 12 samples distributed on 4 lanes with the four-channel Illumina chemistry using each lane combination only once:
 
-`Rscript checkMyIndex.r -i inputIndexesExample.txt -n 12 -m 3 -u lane`
+`Rscript checkMyIndex.r -i inputIndexesExample.txt -C 4 -n 12 -m 3 -u lane`
 
-* List of 12 indexes for 12 samples distributed on 4 lanes using each index only once:
+* List of 12 indexes for 12 samples distributed on 4 lanes with the two-channel Illumina chemistry using each index only once:
 
-`Rscript checkMyIndex.r -i inputIndexesExample.txt -n 12 -m 3 -u index`
+`Rscript checkMyIndex.r -i inputIndexesExample.txt -C 2 -n 12 -m 3 -u index`
 
 The help page of the script can be displayed running the following command: 
 
@@ -56,6 +56,12 @@ Here is the list of the R packages needed to run *checkMyIndex*:
 * *parallel* to speed up the calculations
 
 One can install each of these packages running `install.packages(packageName)` in R.
+
+## Illumina chemistry
+
+Illumina has developed two types of chemistry: the four-channels for the HiSeq and MiSeq sequencing devices and the two-channels for the NovaSeq, NextSeq and MiniSeq devices. With the four-channel chemistry A/C are red and G/T are green and indexes are compatible if there are at least one red light and one green light at each position. With the wo-channel chemistry G has no color, A is orange, C is red and T is green and indexes are compatible if there is at least one color at each position. Note that indexes starting with GG are not compatible with the two-channel chemistry.
+
+Please refer to the Illumina documentation for more details.
 
 ## About checkMyIndex
 
