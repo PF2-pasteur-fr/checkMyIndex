@@ -8,15 +8,17 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                     
                     # parameters
                     sidebarPanel(
-                      fileInput("inputFile", label="Select your tab-delimited file containing the index ids and sequences", accept="text"),
+                      fileInput("inputFile", label="Select your tab-delimited file containing the i7 index ids and sequences", accept="text"),
+                      conditionalPanel(condition="output.indexUploaded", {fileInput("inputFile2", label="Optional i5 indexes for dual-indexing", accept="text")}),
                       selectizeInput("chemistry", label="Illumina chemistry", 
                                      choices=c("Four-channels (HiSeq & MiSeq)" = 4, "Two-channels (NovaSeq, NextSeq & MiniSeq)" = 2)),
                       conditionalPanel(condition="output.indexUploaded", {uiOutput("nbSamples")}),
                       conditionalPanel(condition="output.indexUploaded", {uiOutput("multiplexingRate")}),
-                      selectInput("unicityConstraint", label="Constraint on the indexes", 
-                                  choices=c("None" = "none", "Use each combination only once" = "lane", "Use each index only once" = "index")),
-                      checkboxInput("completeLane", "Directly look for a solution with the desired multiplexing rate", value=FALSE),
-                      checkboxInput("selectCompIndexes", "Select compatible indexes before looking for a solution", value=FALSE),
+                      conditionalPanel(condition="!output.indexUploaded2", {selectInput("unicityConstraint", label="Constraint on the indexes (single-indexing only)", 
+                                                                                      choices=c("None" = "none", "Use each combination only once" = "lane", "Use each index only once" = "index"),
+                                                                                      selected="none")}),
+                      conditionalPanel(condition="output.indexUploaded & !output.indexUploaded2", {checkboxInput("completeLane", "Directly look for a solution with the desired multiplexing rate", value=FALSE)}),
+                      conditionalPanel(condition="output.indexUploaded & !output.indexUploaded2", {checkboxInput("selectCompIndexes", "Select compatible indexes before looking for a solution", value=FALSE)}),
                       selectInput("nbMaxTrials", label="Maximum number of trials to find a solution", choices=10^(1:4)),
                       actionButton("go", label="Search for a solution")
                     ),
@@ -26,12 +28,14 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                       
                       tabsetPanel(
                         # 1st panel: input
-                        tabPanel("Input indexes", dataTableOutput("inputIndex")),
+                        tabPanel("Input indexes",
+                                 p(textOutput("textIndex")),
+                                 dataTableOutput("inputIndex"),
+                                 p(textOutput("textIndex2")),
+                                 dataTableOutput("inputIndex2")),
                         
                         # 2nd panel: results
                         tabPanel("Proposed flowcell design",
-                                 p(textOutput("textNbCombinations")),
-                                 p(textOutput("textNbCompCombinations")),
                                  p(textOutput("textDescribingSolution")),
                                  dataTableOutput("solution"),
                                  br(""),
@@ -44,10 +48,11 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                         # 4th panel: help
                         tabPanel("Help",
                                  
-                                 h3("Input indexes file"),
-                                 p("The user must provide the list of its available indexes as a two-column tab-delimited text file (without header). 
-                                   Index ids are in the first column and the corresponding sequences in the second. An example of such a file is available ", 
-                                   a("here", href="https://github.com/PF2-pasteur-fr/checkMyIndex/blob/master/inputIndexesExample.txt")," to test the application."),
+                                 h3("Input indexes file(s)"),
+                                 p("The user must provide its available indexes as two-column tab-delimited text file(s) without header: index ids are in the first column
+                                   and corresponding sequences in the second. An example of such a file is available ", 
+                                   a("here", href="https://github.com/PF2-pasteur-fr/checkMyIndex/blob/master/inputIndexesExample.txt")," to test the application.
+                                   Note that for dual-indexing sequencing experiments the first file corresponds to i7 indexes and second file to i5 indexes."),
                                  
                                  h3("How the algorithm works"),
                                  p("There can be many combinations of indexes to check according to the number of input indexes and the multiplexing rate. Thus, testing for 
@@ -68,12 +73,10 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                    Please refer to the Illumina documentation for more details."),
                                  p(strong("Total number of samples"), "in your experiment (can be greater than the number of available indexes)."),
                                  p(strong("Multiplexing rate"), "i.e. number of samples per pool/lane (only divisors of the total number of samples are proposed)."),
-                                 p(strong("Constraint on the indexes"), "to avoid having two samples or two pools/lanes with the same index(es)."),
-                                 p(strong("Directly look for a solution with the desired multiplexing rate"), "instead of looking for a partial solution with a few samples per pool/lane 
-                                           and then add some of the remaining indexes to reach the desired multiplexing rate."),
-                                 p(strong("Select compatible indexes"), "before looking for a (partial) solution can take some time but then speed up the algorithm. 
-                                           If one looks for a solution directly with the desired multiplexing rate, turning on this options allows to get the number of 
-                                           compatible combinations of indexes."),
+                                 p(strong("Constraint on the indexes"), "(only for single-indexing) to avoid having two samples or two pools/lanes with the same index(es)."),
+                                 p(strong("Directly look for a solution with the desired multiplexing rate"), "(only for single-indexing) instead of looking for a partial solution 
+                                           with a few samples per pool/lane and then add some of the remaining indexes to reach the desired multiplexing rate."),
+                                 p(strong("Select compatible indexes"), "(only for single-indexing) before looking for a (partial) solution can take some time but then speed up the algorithm."),
                                  p(strong("Maximum number of trials"), "can be increased if a solution is difficult to find with the parameters chosen."),
 
                                  h3("About"),

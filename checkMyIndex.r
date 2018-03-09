@@ -1,17 +1,25 @@
 #! /usr/bin/Rscript
 
-# Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -C 4 -n 8 -m 2
-# Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -C 4 -n 6 -m 2 -u index
-# Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -C 4 -n 12 -m 3 -u lane
-# Rscript checkMyIndex.r --inputFile=inputIndexesExample.txt -C 4 -n 24 -m 4 -u index
+# Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 8 -m 2
+# Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 6 -m 2 -u index
+# Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 12 -m 3 -u lane
+# Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 24 -m 4 -u index
+# Rscript checkMyIndex.r --inputFile7=index24-i7.txt --inputFile5=index24-i5.txt -C 2 -n 24 -m 12
 
 library(optparse)
 
 option_list <- list( 
-  make_option(c("-i","--inputFile"),
+  make_option("--inputFile7",
               type="character",
               dest="inputFile",
-              help="two columns tab-delimited text file without header containing the available index ids and sequences"),
+              help="two columns tab-delimited text file without header containing the available i7 index ids and sequences"),
+  
+  make_option("--inputFile5",
+              type="character",
+              default=NULL,
+              dest="inputFile2",
+              help="optional two columns tab-delimited text file without header containing the available i5 index ids
+              and sequences (for dual-indexing sequencing experiments"),
   
   make_option(c("-n","--nbSamples"),
               type="integer",
@@ -37,7 +45,8 @@ option_list <- list(
               type="character",
               default="none",
               dest="unicityConstraint",
-              help="set to 'lane' to use each combination of compatible indexes only once or 'index' to use each index only once [default: %default]"),
+              help="(only for single-indexing) set to 'lane' to use each combination of compatible indexes only once or
+              'index' to use each index only once. Note that it is automatically set to 'none' in case of dual-indexing [default: %default]"),
   
   make_option(c("-o","--outputFile"),
               type="character",
@@ -50,15 +59,17 @@ option_list <- list(
               default=FALSE,
               action="store_true",
               dest="completeLane",
-              help="directly look for a solution with the desired multiplexing rate instead of looking for a solution with 
-              a few samples per pool/lane and add some of the remaining indexes to reach the desired multiplexing rate [default: %default]"),
+              help="(only for single-indexing) directly look for a solution with the desired multiplexing rate instead of
+              looking for a solution with a few samples per pool/lane and add some of the remaining indexes to reach the
+              desired multiplexing rate. Note that it is automatically set to FALSE in case of dual-indexing [default: %default]"),
   
   make_option(c("-s","--selectCompIndexes"),
               type="logical",
               default=FALSE,
               action="store_true",
               dest="selectCompIndexes",
-              help="select compatible indexes before looking for a solution (can take some time but then speed up the algorithm) [default: %default]"),
+              help="(only for single-indexing) select compatible indexes before looking for a solution (can take some time
+              but then speed up the algorithm). Note that it is automatically set to FALSE in case of dual-indexing [default: %default]"),
   
   make_option(c("-b","--nbMaxTrials"),
               default=10,
@@ -87,6 +98,7 @@ parser <- OptionParser(usage="usage: %prog [options]",
 opt <- parse_args(parser, args=commandArgs(trailingOnly=TRUE), positional_arguments=0)$options
 
 inputFile <- opt$inputFile
+inputFile2 <- opt$inputFile2
 multiplexingRate <- as.numeric(opt$multiplexingRate)
 nbSamples <- as.numeric(opt$nbSamples)
 chemistry <- opt$chemistry
@@ -101,30 +113,42 @@ source("global.r")
 nbLanes <- nbSamples/multiplexingRate
 index <- readIndexesFile(inputFile)
 index <- addColors(index, chemistry)
+nr <- nrow(index)
+# dual-indexing
+if (!is.null(inputFile2)){
+  index2 <- readIndexesFile(inputFile2)
+  index2 <- addColors(index2, chemistry)
+  nr2 <- nrow(index2)
+  unicityConstraint <- "none"
+  completeLane <- FALSE
+  selectCompIndexes <- FALSE
+} else{
+  nr2 <- 1
+  index2 <- NULL
+}
 
 # some basic checkings
 if (length(chemistry) != 1 || !I(chemistry %in% c("2", "4"))) stop("\nChemistry must be equal to 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq).")
 if (nbSamples %% 1 != 0 || nbSamples <= 1) stop("\nNumber of samples must be an integer greater than 1.")
 if (nbSamples %% multiplexingRate != 0) stop("\nNumber of samples must be a multiple of the multiplexing rate.")
-if (multiplexingRate > nrow(index)) stop("\nMultiplexing rate can't be higher than the number of input indexes.")
+if (multiplexingRate > nr*nr2) stop("\nMultiplexing rate can't be higher than the number of input indexes.")
 
 cat("--------------- Parameters ---------------\n")
-cat("Input file:", inputFile,"\n")
-cat("Multiplexing rate:", multiplexingRate,"\n")
-cat("Number of samples:", nbSamples,"\n")
+cat("Input file i7: ", inputFile, " (", nrow(index), " indexes)\n", sep="")
+cat("Input file i5: ", inputFile2, 
+    ifelse(!is.null(index2), paste0("(", nrow(index2), " indexes)"), ""), "\n")
+cat("Multiplexing rate:", multiplexingRate, "\n")
+cat("Number of samples:", nbSamples, "\n")
 cat("Chemistry:", ifelse(chemistry==2, "two-channels (NovaSeq, NextSeq & MiniSeq)", "four-channels (HiSeq & MiSeq)"), "\n")
-cat("Number of pools/lanes:", nbLanes,"\n")
+cat("Number of pools/lanes:", nbLanes, "\n")
 cat("Constraint:", ifelse(unicityConstraint=="none","none",
                           ifelse(unicityConstraint=="lane", "use each combination of compatible indexes only once", 
-                                 "use each index only once")),"\n")
+                                 "use each index only once")), "\n")
 cat("Directly look for complete pools/lanes:", completeLane, "\n")
 cat("Select compatible indexes before looking for a solution:", selectCompIndexes, "\n")
-cat("Maximum number of iterations to find a solution:", nbMaxTrials,"\n")
-cat("Output file:", outputFile,"\n")
+cat("Maximum number of iterations to find a solution:", nbMaxTrials, "\n")
+cat("Output file:", outputFile, "\n")
 cat("------------------------------------------\n")
-
-# how many possible combinations (combinatory logic using C^n_k)
-cat("\nIn the input list of", nrow(index), "indexes:", choose(n=nrow(index), k=multiplexingRate), "possible combinations of", multiplexingRate, "indexes (not necessarily compatible)\n")
 
 # generate the list of indexes
 indexesList <- generateListOfIndexesCombinations(index = index,
@@ -133,16 +157,21 @@ indexesList <- generateListOfIndexesCombinations(index = index,
                                                  selectCompIndexes = selectCompIndexes,
                                                  chemistry = chemistry)
 
-# print the number of compatible combinations
-if (nrow(indexesList[[1]]) == multiplexingRate & selectCompIndexes){
-  cat("Among them", length(indexesList), "contain compatible indexes.\n")
+if (!is.null(index2)){
+  indexesList2 <- generateListOfIndexesCombinations(index = index2,
+                                                   nbSamplesPerLane = multiplexingRate,
+                                                   completeLane = completeLane,
+                                                   selectCompIndexes = selectCompIndexes,
+                                                   chemistry = chemistry)
 } else{
-  cat("Note: the number of combinations containing compatible indexes cannot be calculated with the parameters used.\n")
+  indexesList2 <- NULL
 }
 
 cat("Let's try to find a solution for", nbLanes, "pool(s) of", multiplexingRate, "samples using the specified parameters:\n\n")
 print(solution <- findSolution(indexesList = indexesList,
                                index = index,
+                               indexesList2 = indexesList2,
+                               index2 = index2,
                                nbSamples = nbSamples,
                                multiplexingRate = multiplexingRate,
                                unicityConstraint = unicityConstraint,

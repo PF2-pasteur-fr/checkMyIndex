@@ -9,7 +9,7 @@ Search for a set of compatible indexes for your sequencing experiment according 
 
 ## Input indexes file
 
-The list of the available indexes must be stored in a text file containing two tab-separated columns (without header): index ids are in the first column and the corresponding sequences in the second. `inputIndexesExample.txt` is an example of such a file and can be used to test *checkMyIndex*.
+The list of the available indexes must be stored in a text file containing two tab-separated columns (without header): index ids are in the first column and the corresponding sequences in the second. `inputIndexesExample.txt` is an example of such a file and can be used to test *checkMyIndex*. For dual-indexing sequencing experiments the user needs to provide two files: the first one for the i7 indexes and the second for the i5 indexes. `index24-i7.txt` and `index24-i5.txt` are available to test the research of compatible dual-indexes.
 
 ## Shiny application
 
@@ -27,19 +27,23 @@ One can use the application locally running the two following lines in R:
 
 ## Rscript command line
 
-*checkMyIndex* can be executed calling `checkMyIndex.r` with `Rscript`. As `checkMyIndex.r` sources `global.r`, both files must be placed in the same directory. Here are 3 examples using the input example file `inputIndexesExample.txt`:
+*checkMyIndex* can be executed calling `checkMyIndex.r` with `Rscript`. As `checkMyIndex.r` sources `global.r`, both files must be placed in the same directory. Here are 4 examples using either `inputIndexesExample.txt` or `index24-i7.txt` and `index24-i5.txt`:
 
 * List of 9 indexes for 9 samples distributed on 3 lanes with the four-channel Illumina chemistry:
 
-`Rscript checkMyIndex.r -i inputIndexesExample.txt -C 4 -n 9 -m 3`
+`Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 9 -m 3`
 
 * List of 12 indexes for 12 samples distributed on 4 lanes with the four-channel Illumina chemistry using each lane combination only once:
 
-`Rscript checkMyIndex.r -i inputIndexesExample.txt -C 4 -n 12 -m 3 -u lane`
+`Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 12 -m 3 -u lane`
 
 * List of 12 indexes for 12 samples distributed on 4 lanes with the two-channel Illumina chemistry using each index only once:
 
-`Rscript checkMyIndex.r -i inputIndexesExample.txt -C 2 -n 12 -m 3 -u index`
+`Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 2 -n 12 -m 3 -u index`
+
+* List of 24 dual-indexes for 24 samples distributed on 2 lanes with the two-channel Illumina chemistry:
+
+`Rscript checkMyIndex.r --inputFile7=index24-i7.txt --inputFile5=index24-i5.txt -C 2 -n 24 -m 12`
 
 The help page of the script can be displayed running the following command: 
 

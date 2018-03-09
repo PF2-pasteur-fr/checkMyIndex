@@ -5,7 +5,7 @@ options(shiny.sanitize.errors = FALSE,   # to display informative error messages
 
 shinyServer(function(input, output) {
   
-  # list of input indexes
+  # list of input indexes 1
   inputIndex <- reactive({
     if(is.null(input$inputFile)){
       return(NULL)
@@ -17,92 +17,109 @@ shinyServer(function(input, output) {
   })
   output$indexUploaded <- reactive({return(!is.null(inputIndex()))})
   outputOptions(output, "indexUploaded", suspendWhenHidden=FALSE)
-  output$inputIndex <- renderDataTable({
-    index <- inputIndex()
-    startGG <- sapply(index$sequence, substr, 1, 2) == "GG"
-    if (any(startGG)){
-      index$comment <- ""
-      index[startGG, "comment"] <- "Can't be used with the two-channel chemistry"
+  output$inputIndex <- renderDataTable({inputIndex()}, options=list(paging=FALSE, searching=FALSE, info=FALSE))
+  textIndex <- reactive({
+    if (is.null(inputIndex())) "" else paste("The table below shows the", nrow(inputIndex()), "i7 indexes uploaded:")
+  })
+  output$textIndex <- renderText({textIndex()})
+  
+  # list of input indexes 2
+  inputIndex2 <- reactive({
+    if(is.null(input$inputFile2)){
+      return(NULL)
+    } else{
+      index2 <- readIndexesFile(file=input$inputFile2$datapath)
+      index2 <- addColors(index2, input$chemistry)
+      return(index2)
     }
-    return(index)
-  }, options=list(paging=FALSE, searching=FALSE))
+  })
+  output$indexUploaded2 <- reactive({return(!is.null(inputIndex2()))})
+  outputOptions(output, "indexUploaded2", suspendWhenHidden=FALSE)
+  output$inputIndex2 <- renderDataTable({inputIndex2()}, options=list(paging=FALSE, searching=FALSE, info=FALSE))
+  textIndex2 <- reactive({
+    if (is.null(inputIndex2())) "" else paste("The table below shows the", nrow(inputIndex2()), "i5 indexes uploaded:")
+  })
+  output$textIndex2 <- renderText({textIndex2()})
   
   # propose both the possible nb samples and multiplexing rates according to the input list of indexes
   output$nbSamples <- renderUI({
-    if (!is.null(inputIndex())){
+    if (is.null(inputIndex())){
+      return("")
+    } else{
       index <- inputIndex()
       nr <- ifelse(input$chemistry == "4", nrow(index), nrow(index[substr(index$sequence, 1, 2) != "GG",]))
-      numericInput("nbSamples", label="Total number of samples in the experiment", value=nr, min=2, step=1)
-    } else{
-      ""
+      if (!is.null(inputIndex2())){
+        index2 <- inputIndex2()
+        nr2 <- ifelse(input$chemistry == "4", nrow(index2), nrow(index2[substr(index2$sequence, 1, 2) != "GG",]))
+      } else{
+        nr2 <- 1
+      }
+      numericInput("nbSamples", label="Total number of samples in the experiment", value=nr*nr2, min=2, step=1)
     }
   })
   output$multiplexingRate <- renderUI({
-    if (!is.null(input$nbSamples)){
+    if (is.null(input$nbSamples)){
+      return("")
+    } else{
       nbSamples <- as.numeric(input$nbSamples)
       if (is.na(nbSamples) || nbSamples %% 1 != 0) stop("Number of samples must be an integer")
       if (nbSamples <= 1) stop("Number of samples must be greater than 1.")
       mr <- 1:nbSamples
       choices <- mr[sapply(mr, function(x) nbSamples %% x == 0)]
-      choices <- choices[choices <= nrow(inputIndex())]
+      index <- inputIndex()
+      nr <- ifelse(input$chemistry == "4", nrow(index), nrow(index[substr(index$sequence, 1, 2) != "GG",]))
+      if (!is.null(inputIndex2())){
+        index2 <- inputIndex2()
+        nr2 <- ifelse(input$chemistry == "4", nrow(index2), nrow(index2[substr(index2$sequence, 1, 2) != "GG",]))
+      } else{
+        nr2 <- 1
+      }
+      choices <- choices[choices <= nr*nr2]
       selectInput("multiplexingRate", label="Multiplexing rate (i.e. # of samples per pool)", 
                   choices=choices, selected=ifelse(input$chemistry == "2", choices[length(choices)], choices[2]))
-    } else{
-      ""
     }
   })
   
-  # number of candidate combinations of indexes
-  textNbCombinations <- reactive({
-    if (is.null(inputIndex()) | is.null(input$multiplexingRate)){
-      ""
-    } else{
-      paste("In the input list of", nrow(inputIndex()), "indexes: there are", choose(n=nrow(inputIndex()), k=as.numeric(input$multiplexingRate)), 
-            "possible combinations of", as.numeric(input$multiplexingRate), "indexes (not necessarily compatible).")
-    }
-  })
-  output$textNbCombinations <- renderText({textNbCombinations()})
-  
-  # generate list of indexes
+  # generate list(s) of indexes
   generateList <- reactive({
-    generateListOfIndexesCombinations(index = inputIndex(),
-                                      nbSamplesPerLane = as.numeric(input$multiplexingRate),
-                                      completeLane = input$completeLane,
-                                      selectCompIndexes = input$selectCompIndexes,
-                                      chemistry = input$chemistry)
+    return(generateListOfIndexesCombinations(index = inputIndex(),
+                                             nbSamplesPerLane = as.numeric(input$multiplexingRate),
+                                             completeLane = input$completeLane,
+                                             selectCompIndexes = input$selectCompIndexes,
+                                             chemistry = input$chemistry))
   })
-  
-  # number of compatible combinations of indexes
-  textNbCompCombinations <- eventReactive(input$go, {
-    if (is.null(inputIndex()) | is.null(input$multiplexingRate)){
-      ""
+  generateList2 <- reactive({
+    if (is.null(inputIndex2())){
+      return(NULL)
     } else{
-      if (nrow(generateList()[[1]]) == as.numeric(input$multiplexingRate) & input$selectCompIndexes){
-        paste("Among them", length(generateList()), "contain compatible indexes.")
-      } else{
-        paste("Note: the number of combinations containing compatible indexes cannot be calculated with the parameters used.")
-      }
+      return(generateListOfIndexesCombinations(index = inputIndex2(),
+                                               nbSamplesPerLane = as.numeric(input$multiplexingRate),
+                                               completeLane = input$completeLane,
+                                               selectCompIndexes = input$selectCompIndexes,
+                                               chemistry = input$chemistry))
     }
   })
-  output$textNbCompCombinations <- renderText({textNbCompCombinations()})
   
   # text describing the solution
   textDescribingSolution <- eventReactive(input$go, {
     if (is.null(input$multiplexingRate) | is.null(inputIndex())){
-      ""
+      return("")
     } else{
-      paste("Below is a solution for", as.numeric(input$nbSamples)/as.numeric(input$multiplexingRate), 
-            "pool(s) of", input$multiplexingRate, "samples using the parameters specified:")
+      return(paste("Below is a solution for", as.numeric(input$nbSamples)/as.numeric(input$multiplexingRate),
+                   "pool(s) of", input$multiplexingRate, "samples using the parameters specified:"))
     }
   })
   output$textDescribingSolution <- renderText({textDescribingSolution()})
   
+  # print the solution
   displaySolution <- eventReactive(input$go, {
     if (is.null(input$multiplexingRate) | is.null(inputIndex())){
-      ""
+      return("")
     } else{
       return(findSolution(indexesList = generateList(),
                           index = inputIndex(),
+                          indexesList2 = generateList2(),
+                          index2 = inputIndex2(),
                           nbSamples = as.numeric(input$nbSamples),
                           multiplexingRate = as.numeric(input$multiplexingRate),
                           unicityConstraint = input$unicityConstraint,
@@ -112,14 +129,15 @@ shinyServer(function(input, output) {
                           chemistry = input$chemistry))
     }
   })
-  output$solution <- renderDataTable({displaySolution()}, options=list(paging=FALSE, searching=FALSE))
+  output$solution <- renderDataTable({displaySolution()}, options=list(paging=FALSE, searching=FALSE, info=FALSE))
   
+  # get the number samples of the solution to avoid resizing the heatmap when modifying the input number of samples
   getNbSamples <- eventReactive(input$go, {nrow(displaySolution())})
+  # plot of the solution
   output$heatmapindex <- renderPlot({heatmapindex(displaySolution())}, res=90)
-  output$heatmapindex2 <- renderUI({
-    plotOutput("heatmapindex", width=900, height=220+20*getNbSamples())
-  })
+  output$heatmapindex2 <- renderUI({plotOutput("heatmapindex", width=900, height=220+20*getNbSamples())})
   
+  # download the solution
   output$downloadData <- downloadHandler(
     filename = "chosenIndexes.txt",
     content = function(file) write.table(displaySolution(), file, col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)
