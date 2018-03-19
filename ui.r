@@ -9,7 +9,7 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                     # parameters
                     sidebarPanel(
                       fileInput("inputFile", label="Select your tab-delimited file containing the i7 index ids and sequences", accept="text"),
-                      conditionalPanel(condition="output.indexUploaded", {fileInput("inputFile2", label="Optional i5 indexes for dual-indexing", accept="text")}),
+                      fileInput("inputFile2", label="Optional i5 indexes for dual-indexing", accept="text"),
                       selectizeInput("chemistry", label="Illumina chemistry", 
                                      choices=c("Four-channels (HiSeq & MiSeq)" = 4, "Two-channels (NovaSeq, NextSeq & MiniSeq)" = 2)),
                       conditionalPanel(condition="output.indexUploaded", {uiOutput("nbSamples")}),

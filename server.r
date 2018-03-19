@@ -7,7 +7,7 @@ shinyServer(function(input, output) {
   
   # list of input indexes 1
   inputIndex <- reactive({
-    if(is.null(input$inputFile)){
+    if (is.null(input$inputFile)){
       return(NULL)
     } else{
       index <- readIndexesFile(file=input$inputFile$datapath)
@@ -25,9 +25,10 @@ shinyServer(function(input, output) {
   
   # list of input indexes 2
   inputIndex2 <- reactive({
-    if(is.null(input$inputFile2)){
+    if (is.null(input$inputFile2)){
       return(NULL)
     } else{
+      if (is.null(inputIndex())) stop("Please load i7 indexes first.")
       index2 <- readIndexesFile(file=input$inputFile2$datapath)
       index2 <- addColors(index2, input$chemistry)
       return(index2)
