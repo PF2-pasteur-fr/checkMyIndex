@@ -11,7 +11,9 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                       fileInput("inputFile", label="Select your tab-delimited file containing the i7 index ids and sequences", accept="text"),
                       fileInput("inputFile2", label="Optional i5 indexes for dual-indexing", accept="text"),
                       selectizeInput("chemistry", label="Illumina chemistry", 
-                                     choices=c("Four-channels (HiSeq & MiSeq)" = 4, "Two-channels (NovaSeq, NextSeq & MiniSeq)" = 2)),
+                                     choices=c("Four-channels (HiSeq & MiSeq)" = 4, 
+                                               "Two-channels (NovaSeq, NextSeq & MiniSeq)" = 2,
+                                               "One-channel (iSeq 100)" = 1)),
                       conditionalPanel(condition="output.indexUploaded", {uiOutput("nbSamples")}),
                       conditionalPanel(condition="output.indexUploaded", {uiOutput("multiplexingRate")}),
                       conditionalPanel(condition="!output.indexUploaded2", {selectInput("unicityConstraint", label="Constraint on the indexes (single-indexing only)", 
@@ -66,10 +68,11 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                     the computational time."),
                                  
                                  h3("Parameters"),
-                                 p(strong("Illumina chemistry"), "can be either four-channels (HiSeq & MiSeq) or two-channels (NovaSeq, NextSeq & MiniSeq). With the four-channel
-                                   chemistry A/C are red and G/T are green and indexes are compatible if there are at least one red light and one green light at each position.
-                                   With the two-channel chemistry G has no color, A is orange, C is red and T is green and indexes are compatible if there is at least one
-                                   color at each position. Note that indexes starting with GG are not compatible with the two-channel chemistry.
+                                 p(strong("Illumina chemistry"), "can be either four-channels (HiSeq & MiSeq, two-channels (NovaSeq, NextSeq & MiniSeq) or one-channel (iSeq 100).
+                                   With the four-channel chemistry A/C are red and G/T are green and indexes are compatible if there are at least one red light and one green light
+                                   at each position. With the two-channel chemistry G has no color, A is orange, C is red and T is green and indexes are compatible if there is at
+                                   least one color at each position. Note that indexes starting with GG are not compatible with the two-channel chemistry. With the one-channel
+                                   chemistry compatibility cannot be defined with colors and indexes are compatible is there is at least one A or C or T at each position.
                                    Please refer to the Illumina documentation for more details."),
                                  p(strong("Total number of samples"), "in your experiment (can be greater than the number of available indexes)."),
                                  p(strong("Multiplexing rate"), "i.e. number of samples per pool/lane (only divisors of the total number of samples are proposed)."),

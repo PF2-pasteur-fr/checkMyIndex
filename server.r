@@ -48,10 +48,10 @@ shinyServer(function(input, output) {
       return("")
     } else{
       index <- inputIndex()
-      nr <- ifelse(input$chemistry == "4", nrow(index), nrow(index[substr(index$sequence, 1, 2) != "GG",]))
+      nr <- ifelse(input$chemistry == "2", nrow(index[substr(index$sequence, 1, 2) != "GG",]), nrow(index))
       if (!is.null(inputIndex2())){
         index2 <- inputIndex2()
-        nr2 <- ifelse(input$chemistry == "4", nrow(index2), nrow(index2[substr(index2$sequence, 1, 2) != "GG",]))
+        nr2 <- ifelse(input$chemistry == "2", nrow(index2[substr(index2$sequence, 1, 2) != "GG",]), nrow(index2))
       } else{
         nr2 <- 1
       }
@@ -68,10 +68,10 @@ shinyServer(function(input, output) {
       mr <- 1:nbSamples
       choices <- mr[sapply(mr, function(x) nbSamples %% x == 0)]
       index <- inputIndex()
-      nr <- ifelse(input$chemistry == "4", nrow(index), nrow(index[substr(index$sequence, 1, 2) != "GG",]))
+      nr <- ifelse(input$chemistry == "2", nrow(index[substr(index$sequence, 1, 2) != "GG",]), nrow(index))
       if (!is.null(inputIndex2())){
         index2 <- inputIndex2()
-        nr2 <- ifelse(input$chemistry == "4", nrow(index2), nrow(index2[substr(index2$sequence, 1, 2) != "GG",]))
+        nr2 <- ifelse(input$chemistry == "2", nrow(index2[substr(index2$sequence, 1, 2) != "GG",]), nrow(index2))
       } else{
         nr2 <- 1
       }

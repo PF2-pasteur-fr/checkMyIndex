@@ -29,12 +29,13 @@ option_list <- list(
   make_option(c("-C","--chemistry"),
               type="integer",
               dest="chemistry",
-              help="Illumina chemistry: either 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq) channel chemistry.
+              help="Illumina chemistry: either 1 (iSeq 100), 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq) channel chemistry.
               With the four-channel chemistry A/C are red and G/T are green and indexes are compatible if there are at
               least one red light and one green light at each position. With the two-channel chemistry G has no color, 
               A is orange, C is red and T is green and indexes are compatible if there is at least one color at each
-              position. Note that indexes starting with GG are not compatible with the two-channel chemistry. Please
-              refer to the Illumina documentation for more details."),
+              position. Note that indexes starting with GG are not compatible with the two-channel chemistry. With the
+              one-channel chemistry compatibility cannot be defined with colors and indexes are compatible is there is
+              at least one A or C or T at each position.Please refer to the Illumina documentation for more details."),
   
   make_option(c("-m","--multiplexingRate"),
               type="integer",
@@ -128,7 +129,7 @@ if (!is.null(inputFile2)){
 }
 
 # some basic checkings
-if (length(chemistry) != 1 || !I(chemistry %in% c("2", "4"))) stop("\nChemistry must be equal to 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq).")
+if (length(chemistry) != 1 || !I(chemistry %in% c("1", "2", "4"))) stop("\nChemistry must be equal to 1 (iSeq 100), 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq).")
 if (nbSamples %% 1 != 0 || nbSamples <= 1) stop("\nNumber of samples must be an integer greater than 1.")
 if (nbSamples %% multiplexingRate != 0) stop("\nNumber of samples must be a multiple of the multiplexing rate.")
 if (multiplexingRate > nr*nr2) stop("\nMultiplexing rate can't be higher than the number of input indexes.")
@@ -139,7 +140,10 @@ cat("Input file i5: ", inputFile2,
     ifelse(!is.null(index2), paste0("(", nrow(index2), " indexes)"), ""), "\n")
 cat("Multiplexing rate:", multiplexingRate, "\n")
 cat("Number of samples:", nbSamples, "\n")
-cat("Chemistry:", ifelse(chemistry==2, "two-channels (NovaSeq, NextSeq & MiniSeq)", "four-channels (HiSeq & MiSeq)"), "\n")
+cat("Chemistry:", switch(chemistry,
+                         "1" = "one-channel (iSeq 100)",
+                         "2" = "two-channels (NovaSeq, NextSeq & MiniSeq)", 
+                         "4" = "four-channels (HiSeq & MiSeq)"), "\n")
 cat("Number of pools/lanes:", nbLanes, "\n")
 cat("Constraint:", ifelse(unicityConstraint=="none","none",
                           ifelse(unicityConstraint=="lane", "use each combination of compatible indexes only once", 

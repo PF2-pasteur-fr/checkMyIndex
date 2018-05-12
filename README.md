@@ -5,7 +5,6 @@ Search for a set of compatible indexes for your sequencing experiment according 
 * the number of samples
 * the desired multiplexing rate (i.e. number of samples per pool/lane)
 * the constraint on the indexes (none, use each one or each combination only once)
-* the minimum number of red/green lights required at each position
 
 ## Input indexes file
 
@@ -63,9 +62,7 @@ One can install each of these packages running `install.packages(packageName)` i
 
 ## Illumina chemistry
 
-Illumina has developed two types of chemistry: the four-channels for the HiSeq and MiSeq sequencing devices and the two-channels for the NovaSeq, NextSeq and MiniSeq devices. With the four-channel chemistry A/C are red and G/T are green and indexes are compatible if there are at least one red light and one green light at each position. With the wo-channel chemistry G has no color, A is orange, C is red and T is green and indexes are compatible if there is at least one color at each position. Note that indexes starting with GG are not compatible with the two-channel chemistry.
-
-Please refer to the Illumina documentation for more details.
+Illumina has developed three types of chemistry: the four-channels for the HiSeq and MiSeq sequencing devices, the two-channels for the NovaSeq, NextSeq and MiniSeq devices and the one-channel for the iSeq 100 device. With the four-channel chemistry A/C are red and G/T are green and indexes are compatible if there are at least one red light and one green light at each position. With the wo-channel chemistry G has no color, A is orange, C is red and T is green and indexes are compatible if there is at least one color at each position. Note that indexes starting with GG are not compatible with the two-channel chemistry. With the one-channel chemistry compatibility cannot be defined with colors and indexes are compatible is there is at least one A or C or T at each position. Please refer to the Illumina documentation for more details.
 
 ## About checkMyIndex
 

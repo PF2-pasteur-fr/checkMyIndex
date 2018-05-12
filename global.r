@@ -9,13 +9,18 @@ readIndexesFile <- function(file){
 
 addColors <- function(index, chemistry){
   # convert bases into colors
-  if (chemistry == "2"){
-    # G has no color, A is orange, C is red and T is green
-    index$color <- gsub("T", "G", gsub("C", "R", gsub("A", "O", gsub("G", "-", index$sequence))))
-  } else{
+  if (chemistry == "4"){
     # A/C are red and G/T are green
     index$color <- gsub("G|T", "G", gsub("A|C", "R", index$sequence))
   }
+  if (chemistry == "2"){
+    # G has no color, A is orange, C is red and T is green
+    index$color <- gsub("T", "G", gsub("C", "R", gsub("A", "O", gsub("G", "-", index$sequence))))
+  } 
+  if (chemistry == "1"){
+    # G has no color, A is orange, C is red and T is green
+    index$color <- gsub("A", "G", gsub("C", "R", gsub("T", "O", gsub("G", "-", index$sequence))))
+  } 
   return(index)
 }
 
@@ -38,13 +43,14 @@ areIndexesCompatible <- function(index, chemistry){
   # return TRUE if the input indexes are compatible (i.e. can be used within the same pool/lane)
   if (nrow(index)==1) return(TRUE)
   matColors <- do.call("rbind", strsplit(index$color, ""))
-  if (chemistry == "2"){
-    sumNoColor <- apply(matColors, 2, function(x) sum(x=="-"))
-    return(all(sumNoColor < nrow(index)))
-  } else{
+  if (chemistry == "4"){
     sumRed <- apply(matColors, 2, function(x) sum(x=="R"))
     sumGreen <- nrow(matColors) - sumRed
     return(all(sumRed >= 1 & sumGreen >= 1))
+  }
+  if (chemistry %in% c("1","2")){
+    sumNoColor <- apply(matColors, 2, function(x) sum(x=="-"))
+    return(all(sumNoColor < nrow(index)))
   }
 }
 
@@ -296,6 +302,10 @@ checkProposedSolution <- function(solution, unicityConstraint, chemistry){
   if (chemistry == "2" && any(sapply(solution$sequence, substr, 1, 2) == "GG")){
     stop("Indexes starting with GG are not compatible with the chosen chemistry. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
   }
+  # one-channel chemistry and all indexes starting with GG
+  if (chemistry == "1" && any(sapply(lapply(split(solution$sequence, solution$pool), substr, 1, 2), function(x) all(x=="GG")))){
+    stop("Having all the indexes of a pool starting with GG is not compatible with the chosen chemistry. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  }
 }
 
 # dual-indexing solution checking
@@ -323,6 +333,13 @@ checkProposedSolution2 <- function(solution, chemistry){
   }
   if (chemistry == "2" && any(sapply(solution$sequence2, substr, 1, 2) == "GG")){
     stop("Indexes starting with GG are not compatible with the chosen chemistry. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  }
+  # one-channel chemistry and all indexes starting with GG
+  if (chemistry == "1" && any(sapply(lapply(split(solution$sequence1, solution$pool), substr, 1, 2), function(x) all(x=="GG")))){
+    stop("Having all the indexes of a pool starting with GG is not compatible with the chosen chemistry. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
+  }
+  if (chemistry == "1" && any(sapply(lapply(split(solution$sequence2, solution$pool), substr, 1, 2), function(x) all(x=="GG")))){
+    stop("Having all the indexes of a pool starting with GG is not compatible with the chosen chemistry. Thanks to report this error to Hugo Varet (hugo.varet@pasteur.fr)")
   }
 }
 
