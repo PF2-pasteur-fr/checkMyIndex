@@ -48,15 +48,17 @@ dist2indexes <- function(seq1, seq2){
   return(sum(seq1!=seq2))
 }
 
-# function to compute the minimum Hamming distance between N indexes
-minDistNindexes <- function(index){
+# function to compute the minimum Hamming distance between N indexes/sequences
+distNindexes <- function(sequences){
   dists <- mapply(dist2indexes, 
-                  rep(index$sequence, length(index$sequence)), 
-                  rep(index$sequence, each=length(index$sequence)))
-  dists <- matrix(dists, nrow=length(index$sequence), dimnames=list(index$id, index$id))
+                  rep(sequences, length(sequences)), 
+                  rep(sequences, each=length(sequences)))
+  dists <- matrix(dists, nrow=length(sequences))
   diag(dists) <- Inf
-  return(min(dists))
+  return(dists)
 }
+
+scores <- function(sequences) apply(distNindexes(sequences), 2, min)
 
 areIndexesCompatible <- function(index, chemistry){
   # return TRUE if the input indexes are compatible (i.e. can be used within the same pool/lane)
@@ -133,6 +135,8 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
                                    multiplexingRate = multiplexingRate,
                                    unicityConstraint = unicityConstraint)
     }
+    solution$score <- NA
+    for (l in 1:nbLanes) solution[which(solution$pool == l), "score"] <- scores(solution[which(solution$pool == l), "sequence"])
     return(solution)
   # dual-indexing
   } else {
@@ -225,14 +229,21 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
     }
     solution <- do.call("rbind", solution)
     solution <- solution[order(solution$pool1, solution$id1, solution$id2),]
+    # add scores
+    solution$score1 <- NA
+    for (l in 1:nbLanes) solution[which(solution$pool == l), "score1"] <- scores(solution[which(solution$pool == l), "sequence1"])
+    solution$score2 <- NA
+    for (l in 1:nbLanes) solution[which(solution$pool == l), "score2"] <- scores(solution[which(solution$pool == l), "sequence2"])
     solution <- data.frame(sample=1:(nbLanes*multiplexingRate),
                            pool=solution$pool1,
                            id1=solution$id1,
                            sequence1=solution$sequence1,
                            color1=solution$color1,
+                           score1=solution$score1,
                            id2=solution$id2,
                            sequence2=solution$sequence2,
                            color2=solution$color2,
+                           score2=solution$score2,
                            stringsAsFactors = FALSE)
     return(solution)
   }

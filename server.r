@@ -15,6 +15,7 @@ shinyServer(function(input, output, session) {
     index <- tryCatch({readIndexesFile(file)}, 
                       error = function(e) stop("An error occured when loading index 1 file, please check its structure."))
     index <- addColors(index, input$chemistry)
+    index$score <- scores(index$sequence)
     return(index)
   })
   output$indexUploaded <- reactive({!is.null(inputIndex())})
@@ -25,8 +26,9 @@ shinyServer(function(input, output, session) {
     if (is.null(index)){
       "No index file loaded yet, use the left panel to select an input file."
     } else{
-      paste0("The table below shows the ", nrow(index), " indexes 1 (i7) uploaded. Note that the mininum number of mismatches
-             between two indexes of this list is ", minDistNindexes(index), ".")
+      paste0("The table below shows the ", nrow(index), " indexes 1 (i7) uploaded with the colors corresponding
+             to the chosen Illumina chemistry and the minimum number of mismatches with the other indexes.
+             Note that the smallest number of mismatches between two indexes of this list is ", min(index$score), ".")
     }
   })
   output$textIndex <- renderText({tryCatch({textIndex()}, error = function(e) NULL)})
@@ -47,6 +49,7 @@ shinyServer(function(input, output, session) {
     index2 <- tryCatch({readIndexesFile(file2)}, 
                        error = function(e) stop("An error occured when loading index 2 file, please check its structure."))
     index2 <- addColors(index2, input$chemistry)
+    index2$score <- scores(index2$sequence)
     return(index2)
   })
   output$indexUploaded2 <- reactive({!is.null(inputIndex2())})
@@ -57,8 +60,10 @@ shinyServer(function(input, output, session) {
     if (is.null(index2)){
       ""
     } else{
-      paste0("The table below shows the ", nrow(index2), " indexes 2 (i5) uploaded. Note that the mininum number of mismatches
-               between two indexes of this list is ", minDistNindexes(index2), ".")
+      paste0("The table below shows the ", nrow(index2), " indexes 2 (i5) uploaded with the colors corresponding
+             to the chosen Illumina chemistry and the minimum number of mismatches with the other indexes.
+             Note that the smallest number of mismatches between two indexes of this list is ", min(index2$score), ".")
+      
     }
   })
   output$textIndex2 <- renderText({tryCatch({textIndex2()}, error = function(e) NULL)})
@@ -133,8 +138,9 @@ shinyServer(function(input, output, session) {
     } else{
       return(paste("Below is a solution for", as.numeric(input$nbSamples)/as.numeric(input$multiplexingRate),
                    "pool(s) of", input$multiplexingRate, "samples using the parameters specified. The table contains
-                   one row per sample to be sequenced and several columns: pool/lane labels, index ids, index sequences
-                   and the corresponding colors according to the chosen Illumina chemistry."))
+                   one row per sample to be sequenced and several columns: pool/lane labels, index ids, index sequences,
+                   the corresponding colors according to the chosen Illumina chemistry and a score equal to the minimum
+                   number of mismatches with the other indexes of the pool/lane."))
     }
   })
   output$textDescribingSolution <- renderText({tryCatch({textDescribingSolution()}, error = function(e) NULL)})
@@ -151,7 +157,7 @@ shinyServer(function(input, output, session) {
                             index2 = inputIndex2(),
                             nbSamples = as.numeric(input$nbSamples),
                             multiplexingRate = as.numeric(input$multiplexingRate),
-                            unicityConstraint = input$unicityConstraint,
+                            unicityConstraint = ifelse(is.null(inputIndex2()), input$unicityConstraint, "none"),
                             nbMaxTrials = as.numeric(input$nbMaxTrials),
                             completeLane = input$completeLane,
                             selectCompIndexes = input$selectCompIndexes,
