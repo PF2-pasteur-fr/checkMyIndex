@@ -2,7 +2,8 @@
 library(parallel)
 
 readIndexesFile <- function(file){
-  index <- read.table(file, header=FALSE, sep="\t", stringsAsFactors=FALSE, col.names=c("id","sequence"))
+  index <- tryCatch({read.table(file, header=FALSE, sep="\t", stringsAsFactors=FALSE, col.names=c("id","sequence"))},
+                    error = function(e) stop("An error occured when loading the input file, please check its structure."))
   checkInputIndexes(index)
   return(index)
 }
@@ -39,6 +40,24 @@ checkInputIndexes <- function(index){
   }
 }
 
+# function to compute the Hamming distance between two indexes
+dist2indexes <- function(seq1, seq2){
+  seq1 <- unlist(strsplit(seq1, ""))
+  seq2 <- unlist(strsplit(seq2, ""))
+  if (length(seq1)!=length(seq2)) stop("Impossible to calculate the distance as the two sequences do not have the same length.")
+  return(sum(seq1!=seq2))
+}
+
+# function to compute the minimum Hamming distance between N indexes
+minDistNindexes <- function(index){
+  dists <- mapply(dist2indexes, 
+                  rep(index$sequence, length(index$sequence)), 
+                  rep(index$sequence, each=length(index$sequence)))
+  dists <- matrix(dists, nrow=length(index$sequence), dimnames=list(index$id, index$id))
+  diag(dists) <- Inf
+  return(min(dists))
+}
+
 areIndexesCompatible <- function(index, chemistry){
   # return TRUE if the input indexes are compatible (i.e. can be used within the same pool/lane)
   if (nrow(index)==1) return(TRUE)
@@ -59,7 +78,7 @@ generateListOfIndexesCombinations <- function(index, nbSamplesPerLane, completeL
   if (chemistry == "2") index <- index[!sapply(index$sequence, substr, 1, 2) == "GG",]
   nbSamplesPerLane <- min(nrow(index), nbSamplesPerLane)
   # optimize nbSamplesPerLane to generate a reduced number of combinations of indexes
-  while (!completeLane & choose(nrow(index), nbSamplesPerLane) > 1e5 & nbSamplesPerLane > 2) nbSamplesPerLane <- nbSamplesPerLane - 1
+  while (!completeLane & choose(nrow(index), nbSamplesPerLane) > 2e5 & nbSamplesPerLane > 2) nbSamplesPerLane <- nbSamplesPerLane - 1
   # stop if too many combinations to test
   if (choose(nrow(index), nbSamplesPerLane) > 1e9) stop("Too many candidate combinations of indexes to easily find a solution, please use different parameters.")
   # generate the list of all the possible combinations

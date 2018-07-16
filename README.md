@@ -8,7 +8,7 @@ Search for a set of compatible indexes for your sequencing experiment according 
 
 ## Input indexes file
 
-The list of the available indexes must be stored in a text file containing two tab-separated columns (without header): index ids are in the first column and the corresponding sequences in the second. `inputIndexesExample.txt` is an example of such a file and can be used to test *checkMyIndex*. For dual-indexing sequencing experiments the user needs to provide two files: the first one for the i7 indexes and the second for the i5 indexes. `index24-i7.txt` and `index24-i5.txt` are available to test the research of compatible dual-indexes.
+The list of the available indexes must be stored in a text file containing two tab-separated columns (without header): index ids are in the first column and the corresponding sequences in the second. `inputIndexesExample.txt` is an example of such a file and can be used to test *checkMyIndex*. For dual-indexing sequencing experiments the user needs to provide two files: the first one for the indexes 1 (i7) and the second for the indexes 2 (i5). `index24-i7.txt` and `index24-i5.txt` are available to test the research of compatible dual-indexes.
 
 ## Shiny application
 

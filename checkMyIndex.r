@@ -12,35 +12,35 @@ option_list <- list(
   make_option("--inputFile7",
               type="character",
               dest="inputFile",
-              help="two columns tab-delimited text file without header containing the available i7 index ids and sequences"),
+              help="two columns tab-delimited text file without header containing the available index 1 (i7) ids and sequences [mandatory]"),
   
   make_option("--inputFile5",
               type="character",
               default=NULL,
               dest="inputFile2",
-              help="optional two columns tab-delimited text file without header containing the available i5 index ids
+              help="optional two columns tab-delimited text file without header containing the available index 2 (i5) ids
               and sequences (for dual-indexing sequencing experiments"),
   
   make_option(c("-n","--nbSamples"),
               type="integer",
               dest="nbSamples",
-              help="total number of samples in the experiment (can be greater than the number of available indexes)"),
+              help="total number of samples in the experiment (can be greater than the number of available indexes) [mandatory]"),
   
   make_option(c("-C","--chemistry"),
               type="integer",
               dest="chemistry",
-              help="Illumina chemistry: either 1 (iSeq 100), 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq) channel chemistry.
+              help="Illumina chemistry: either 1 (iSeq 100), 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq) channel chemistry [mandatory].
               With the four-channel chemistry A/C are red and G/T are green and indexes are compatible if there are at
               least one red light and one green light at each position. With the two-channel chemistry G has no color, 
               A is orange, C is red and T is green and indexes are compatible if there is at least one color at each
               position. Note that indexes starting with GG are not compatible with the two-channel chemistry. With the
               one-channel chemistry compatibility cannot be defined with colors and indexes are compatible is there is
-              at least one A or C or T at each position.Please refer to the Illumina documentation for more details."),
+              at least one A or C or T at each position. Please refer to the Illumina documentation for more details."),
   
   make_option(c("-m","--multiplexingRate"),
               type="integer",
               dest="multiplexingRate",
-              help="multiplexing rate, i.e. number of samples per sequencing pool (must be a divisor of the total number of samples)"),
+              help="multiplexing rate, i.e. number of samples per sequencing pool (must be a divisor of the total number of samples) [mandatory]"),
   
   make_option(c("-u","--unicityConstraint"),
               type="character",
@@ -98,6 +98,11 @@ parser <- OptionParser(usage="usage: %prog [options]",
                        epilogue="For comments, suggestions, bug reports etc... please contact Hugo Varet <hugo.varet@pasteur.fr>")
 opt <- parse_args(parser, args=commandArgs(trailingOnly=TRUE), positional_arguments=0)$options
 
+# check presence of the mandatory arguments
+if (is.null(opt$inputFile) | is.null(opt$nbSamples) | is.null(opt$multiplexingRate) | is.null(opt$chemistry)){
+  stop("\nAll the mandatory arguments have not been provided. Run 'Rscript checkMyIndex.r --help' for more details.")
+}
+
 inputFile <- opt$inputFile
 inputFile2 <- opt$inputFile2
 multiplexingRate <- as.numeric(opt$multiplexingRate)
@@ -109,17 +114,33 @@ completeLane <- as.logical(opt$completeLane)
 selectCompIndexes <- as.logical(opt$selectCompIndexes)
 nbMaxTrials <- as.numeric(opt$nbMaxTrials)
 
-source("global.r")
+# locate script path to source global.r
+ca <- commandArgs()
+ca.file <- ca[grepl("--file=", ca)]
+if (length(ca.file) != 1) stop("Can't determine the path of the R scripts.\n")
+ca.file <- sub("--file=", "", ca.file)
+path.global.r <- sub(basename(ca.file), "global.r", ca.file)
+if (!file.exists(path.global.r)) stop("Both checkMyIndex.r and global.r files must be in the same directory.\n")
+source(path.global.r)
 
 nbLanes <- nbSamples/multiplexingRate
-index <- readIndexesFile(inputFile)
-index <- addColors(index, chemistry)
-nr <- nrow(index)
+if (file.exists(inputFile)){
+  index <- readIndexesFile(inputFile)
+  index <- addColors(index, chemistry)
+  nr <- nrow(index)
+} else{
+  stop("\n", inputFile, " does not exist.")
+}
+
 # dual-indexing
 if (!is.null(inputFile2)){
-  index2 <- readIndexesFile(inputFile2)
-  index2 <- addColors(index2, chemistry)
-  nr2 <- nrow(index2)
+  if (file.exists(inputFile2)){
+    index2 <- readIndexesFile(inputFile2)
+    index2 <- addColors(index2, chemistry)
+    nr2 <- nrow(index2)
+  } else{
+    stop("\n", inputFile2, " does not exist.")
+  }
   unicityConstraint <- "none"
   completeLane <- FALSE
   selectCompIndexes <- FALSE
@@ -129,15 +150,19 @@ if (!is.null(inputFile2)){
 }
 
 # some basic checkings
-if (length(chemistry) != 1 || !I(chemistry %in% c("1", "2", "4"))) stop("\nChemistry must be equal to 1 (iSeq 100), 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq).")
+if (!I(chemistry %in% c("1", "2", "4"))) stop("\nChemistry must be equal to 1 (iSeq 100), 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq).")
 if (nbSamples %% 1 != 0 || nbSamples <= 1) stop("\nNumber of samples must be an integer greater than 1.")
 if (nbSamples %% multiplexingRate != 0) stop("\nNumber of samples must be a multiple of the multiplexing rate.")
 if (multiplexingRate > nr*nr2) stop("\nMultiplexing rate can't be higher than the number of input indexes.")
+if (!I(unicityConstraint %in% c("none", "lane", "index"))) stop("\nUnicity constraint must be equal to 'none', 'lane' or 'index'.")
+if (!I(completeLane %in% c(TRUE, FALSE))) stop("\ncomplete parameter must be TRUE or FALSE.")
+if (!I(selectCompIndexes %in% c(TRUE, FALSE))) stop("\nselectCompIndexes parameter must be TRUE or FALSE.")
+if (is.na(nbMaxTrials) || nbMaxTrials <= 0) stop("\nNumber of trials must be an integer greater than 1.")
 
 cat("--------------- Parameters ---------------\n")
-cat("Input file i7: ", inputFile, " (", nrow(index), " indexes)\n", sep="")
-cat("Input file i5: ", inputFile2, 
-    ifelse(!is.null(index2), paste0("(", nrow(index2), " indexes)"), ""), "\n")
+cat("Input file i7 (indexes 1): ", inputFile, " (", nrow(index), " indexes)\n", sep="")
+cat("Input file i5 (indexes 2): ", inputFile2, 
+    ifelse(!is.null(index2), paste0(" (", nrow(index2), " indexes)"), ""), "\n", sep="")
 cat("Multiplexing rate:", multiplexingRate, "\n")
 cat("Number of samples:", nbSamples, "\n")
 cat("Chemistry:", switch(chemistry,
@@ -186,7 +211,7 @@ print(solution <- findSolution(indexesList = indexesList,
 
 if (!is.null(outputFile)){
   write.table(solution, outputFile, col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)
-  cat(paste0("\nThe proposed sequencing design has been exported into ", outputFile))
+  cat("\nThe proposed sequencing design has been exported into", outputFile)
 }
 
 cat("\nRun the program again to obtain another solution!\n")

@@ -8,8 +8,12 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                     
                     # parameters
                     sidebarPanel(
-                      fileInput("inputFile", label="Select your tab-delimited file containing the i7 index ids and sequences", accept="text"),
-                      fileInput("inputFile2", label="Optional i5 indexes for dual-indexing", accept="text"),
+                      fileInput("inputFile", label="Select your tab-delimited file containing the index 1 (i7) ids and sequences", accept="text"),
+                      fileInput("inputFile2", label="Optional index 2 (i5) file for dual-indexing", accept="text"),
+                      selectizeInput("testdata", label="Load test indexes (overwrite those already imported)", 
+                                     choices=c("None"="none",
+                                               "24 indexes 1 (i7)"="simple",
+                                               "6 indexes 1 (i7) and 4 indexes 2 (i5)"="dual")),
                       selectizeInput("chemistry", label="Illumina chemistry", 
                                      choices=c("Four-channels (HiSeq & MiSeq)" = 4, 
                                                "Two-channels (NovaSeq, NextSeq & MiniSeq)" = 2,
@@ -28,7 +32,7 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                     # output
                     mainPanel(
                       
-                      tabsetPanel(
+                      tabsetPanel(id="mainPanel",
                         # 1st panel: input
                         tabPanel("Input indexes",
                                  p(textOutput("textIndex")),
@@ -38,13 +42,15 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                         
                         # 2nd panel: results
                         tabPanel("Proposed flowcell design",
+                                 value="proposedSolution",
                                  p(textOutput("textDescribingSolution")),
                                  dataTableOutput("solution"),
                                  br(""),
-                                 downloadButton("downloadData", "Download")),
+                                 uiOutput("downloadButton")),
                         
                         # 3rd panel: plot results
                         tabPanel("Visualization of the design",
+                                 p(textOutput("textDescribingHeatmap")),
                                  uiOutput("heatmapindex2")),
                         
                         # 4th panel: help
@@ -52,9 +58,12 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                  
                                  h3("Input indexes file(s)"),
                                  p("The user must provide its available indexes as two-column tab-delimited text file(s) without header: index ids are in the first column
-                                   and corresponding sequences in the second. An example of such a file is available ", 
-                                   a("here", href="https://github.com/PF2-pasteur-fr/checkMyIndex/blob/master/inputIndexesExample.txt")," to test the application.
-                                   Note that for dual-indexing sequencing experiments the first file corresponds to i7 indexes and second file to i5 indexes."),
+                                   and corresponding sequences in the second. An example of such a file is available into the GitHub repository and also ", 
+                                   a("here", href="inputIndexesExample.txt", target="blank", download="inputIndexesExample.txt")," to test the application.
+                                   Note that for dual-indexing sequencing experiments the first file corresponds to indexes 1 (i7) and the second file to indexes 2 (i5).
+                                   Example files for dual-indexing are available ",
+                                   a("here", href="index24-i7.txt", target="blank", download="index24-i7.txt"), " (index 1) and ", 
+                                   a("here", href="index24-i5.txt", target="blank", download="index24-i5.txt"), " (index 2)."),
                                  
                                  h3("How the algorithm works"),
                                  p("There can be many combinations of indexes to check according to the number of input indexes and the multiplexing rate. Thus, testing for 
@@ -85,8 +94,11 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                  h3("About"),
                                  p("This application has been developed at the Transcriptome & Epigenome Platform of the Biomics pole by Hugo Varet. Feel free to send an e-mail to", 
                                    a("hugo.varet@pasteur.fr"), "for any suggestion or bug report."),
-                                 p("Source code and instructions to run it locally are available on", a("GitHub", href="https://github.com/PF2-pasteur-fr/checkMyIndex"), ". 
+                                 p("Source code and instructions to run it locally are available the", a("GitHub", href="https://github.com/PF2-pasteur-fr/checkMyIndex"), "repository. 
                                    Please note that checkMyIndex is provided without any guarantees as to its accuracy."),
+                                 
+                                 h3("Version"),
+                                 p("This website executes checkMyIndex version 0.99.1."),
                                  div(img(src="logo_c3bi_citech.jpg", width=300), style="text-align: center;"))
                         
                       )
