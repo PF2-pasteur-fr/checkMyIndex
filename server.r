@@ -134,13 +134,13 @@ shinyServer(function(input, output, session) {
   # text describing the solution
   textDescribingSolution <- eventReactive(input$go, {
     if (is.null(input$multiplexingRate) | is.null(inputIndex())){
-      stop("Please load indexes before pressing the \"Search for a solution\" button.")
+      "Please load indexes before pressing the \"Search for a solution\" button."
     } else{
-      return(paste("Below is a solution for", as.numeric(input$nbSamples)/as.numeric(input$multiplexingRate),
-                   "pool(s) of", input$multiplexingRate, "samples using the parameters specified. The table contains
-                   one row per sample to be sequenced and several columns: pool/lane labels, index ids, index sequences,
-                   the corresponding colors according to the chosen Illumina chemistry and a score equal to the minimum
-                   number of mismatches with the other indexes of the pool/lane."))
+      paste("Below is a solution for", as.numeric(input$nbSamples)/as.numeric(input$multiplexingRate),
+            "pool(s) of", input$multiplexingRate, "samples using the parameters specified. The table contains
+            one row per sample to be sequenced and several columns: pool/lane labels, index ids, index sequences,
+            the corresponding colors according to the chosen Illumina chemistry and a score equal to the minimum
+            number of mismatches with the other indexes of the pool/lane.")
     }
   })
   output$textDescribingSolution <- renderText({tryCatch({textDescribingSolution()}, error = function(e) NULL)})
@@ -173,12 +173,12 @@ shinyServer(function(input, output, session) {
   # text describing the solution
   textDescribingHeatmap <- eventReactive(input$go, {
     if (is.null(displaySolution())){
-      return("")
+      ""
     } else{
-      return(paste0("The plot below allows to vizualize the proposed solution. Samples (in rows) are grouped by pool/lane
-                    and each nucleotide of each index is displayed with a color according to the chosen Illumina chemistry. 
-                    One can thus quickly check whether each color is used at each position. Note that sample ids (from 1 to ",
-                    getNbSamples(), ") are printed on the left while index ids are printed on the right."))
+      paste0("The plot below allows to vizualize the proposed solution. Samples (in rows) are grouped by pool/lane
+             and each nucleotide of each index is displayed with a color according to the chosen Illumina chemistry. 
+             One can thus quickly check whether each color is used at each position. Note that sample ids (from 1 to ",
+             getNbSamples(), ") are printed on the left while index ids are printed on the right.")
     }
   })
   output$textDescribingHeatmap <- renderText({textDescribingHeatmap()})
