@@ -58,6 +58,8 @@ distNindexes <- function(sequences){
   return(dists)
 }
 
+# function to compute the scores
+# the score of each index is the minimum number of mismatches with the others
 scores <- function(sequences) apply(distNindexes(sequences), 2, min)
 
 areIndexesCompatible <- function(index, chemistry){
@@ -135,8 +137,7 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
                                    multiplexingRate = multiplexingRate,
                                    unicityConstraint = unicityConstraint)
     }
-    solution$score <- NA
-    for (l in 1:nbLanes) solution[which(solution$pool == l), "score"] <- scores(solution[which(solution$pool == l), "sequence"])
+    solution$score <- unlist(tapply(solution$sequence, solution$pool, scores))
     return(solution)
   # dual-indexing
   } else {
@@ -230,10 +231,8 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
     solution <- do.call("rbind", solution)
     solution <- solution[order(solution$pool1, solution$id1, solution$id2),]
     # add scores
-    solution$score1 <- NA
-    for (l in 1:nbLanes) solution[which(solution$pool == l), "score1"] <- scores(solution[which(solution$pool == l), "sequence1"])
-    solution$score2 <- NA
-    for (l in 1:nbLanes) solution[which(solution$pool == l), "score2"] <- scores(solution[which(solution$pool == l), "sequence2"])
+    solution$score1 <- unlist(tapply(solution$sequence1, solution$pool, scores))
+    solution$score2 <- unlist(tapply(solution$sequence2, solution$pool, scores))
     solution <- data.frame(sample=1:(nbLanes*multiplexingRate),
                            pool=solution$pool1,
                            id1=solution$id1,

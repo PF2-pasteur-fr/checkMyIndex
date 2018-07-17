@@ -1,5 +1,7 @@
 library(shiny)
 
+checkMyIndexVersion <- "0.99.1"
+
 shinyUI(fluidPage(theme = "bootstrap.min.css",
 
                   titlePanel(title=div(img(src="dna.png", width=50), strong("Search for a set of compatible indexes for your sequencing experiment")), windowTitle="checkMyIndex"),
@@ -98,7 +100,7 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                    Please note that checkMyIndex is provided without any guarantees as to its accuracy."),
                                  
                                  h3("Version"),
-                                 p("This website executes checkMyIndex version 0.99.1."),
+                                 p(paste0("This website executes checkMyIndex version ", checkMyIndexVersion, ".")),
                                  div(img(src="logo_c3bi_citech.jpg", width=300), style="text-align: center;"))
                         
                       )

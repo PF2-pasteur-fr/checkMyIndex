@@ -117,10 +117,10 @@ nbMaxTrials <- as.numeric(opt$nbMaxTrials)
 # locate script path to source global.r
 ca <- commandArgs()
 ca.file <- ca[grepl("--file=", ca)]
-if (length(ca.file) != 1) stop("Can't determine the path of the R scripts.\n")
+if (length(ca.file) != 1) stop("\nCan't determine the path of the R scripts.")
 ca.file <- sub("--file=", "", ca.file)
 path.global.r <- sub(basename(ca.file), "global.r", ca.file)
-if (!file.exists(path.global.r)) stop("Both checkMyIndex.r and global.r files must be in the same directory.\n")
+if (!file.exists(path.global.r)) stop("\nBoth checkMyIndex.r and global.r files must be in the same directory.")
 source(path.global.r)
 
 nbLanes <- nbSamples/multiplexingRate
