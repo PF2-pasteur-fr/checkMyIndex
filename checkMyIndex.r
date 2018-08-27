@@ -30,12 +30,12 @@ option_list <- list(
               type="integer",
               dest="chemistry",
               help="Illumina chemistry: either 1 (iSeq 100), 2 (NovaSeq, NextSeq & MiniSeq) or 4 (HiSeq & MiSeq) channel chemistry [mandatory].
-              With the four-channel chemistry A/C are red and G/T are green and indexes are compatible if there are at
-              least one red light and one green light at each position. With the two-channel chemistry G has no color, 
-              A is orange, C is red and T is green and indexes are compatible if there is at least one color at each
-              position. Note that indexes starting with GG are not compatible with the two-channel chemistry. With the
-              one-channel chemistry compatibility cannot be defined with colors and indexes are compatible is there is
-              at least one A or C or T at each position. Please refer to the Illumina documentation for more details."),
+              With the four-channel chemistry, a red laser detects A/C bases and a green laser detects G/T bases and the indexes are compatible 
+              if there is at least one red light and one green light at each position. With the two-channel chemistry, G bases have no color, 
+              A bases are orange, C bases are red and T bases are green and indexes are compatible if there is at least one color at each position. 
+              Note that indexes starting with GG are not compatible with the two-channel chemistry. With the one-channel chemistry, compatibility 
+              cannot be defined with colors and indexes are compatible if there is at least one A or C or T base at each position. 
+              Please refer to the Illumina documentation for more detailed information on the different chemistries."),
   
   make_option(c("-m","--multiplexingRate"),
               type="integer",

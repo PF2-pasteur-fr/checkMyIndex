@@ -1,6 +1,6 @@
 library(shiny)
 
-checkMyIndexVersion <- "0.99.1"
+checkMyIndexVersion <- "1.0.0"
 
 shinyUI(fluidPage(theme = "bootstrap.min.css",
 
@@ -79,12 +79,13 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                     the computational time."),
                                  
                                  h3("Parameters"),
-                                 p(strong("Illumina chemistry"), "can be either four-channels (HiSeq & MiSeq, two-channels (NovaSeq, NextSeq & MiniSeq) or one-channel (iSeq 100).
-                                   With the four-channel chemistry A/C are red and G/T are green and indexes are compatible if there are at least one red light and one green light
-                                   at each position. With the two-channel chemistry G has no color, A is orange, C is red and T is green and indexes are compatible if there is at
-                                   least one color at each position. Note that indexes starting with GG are not compatible with the two-channel chemistry. With the one-channel
-                                   chemistry compatibility cannot be defined with colors and indexes are compatible is there is at least one A or C or T at each position.
-                                   Please refer to the Illumina documentation for more details."),
+                                 p(strong("Illumina chemistry"), "can be either four-channels (HiSeq & MiSeq), two-channels (NovaSeq, NextSeq & MiniSeq) or one-channel (iSeq 100).
+                                   With the four-channel chemistry, a red laser detects A/C bases and a green laser detects G/T bases and the indexes are compatible if there is at 
+                                   least one red light and one green light at each position. With the two-channel chemistry, G bases have no color, A bases are orange, C bases are
+                                   red and T bases are green and indexes are compatible if there is at least one color at each position. Note that indexes starting with GG are not
+                                   compatible with the two-channel chemistry. With the one-channel chemistry, compatibility cannot be defined with colors and indexes are compatible
+                                   if there is at least one A or C or T base at each position. Please refer to the Illumina documentation for more detailed information on the different
+                                   chemistries."),
                                  p(strong("Total number of samples"), "in your experiment (can be greater than the number of available indexes)."),
                                  p(strong("Multiplexing rate"), "i.e. number of samples per pool/lane (only divisors of the total number of samples are proposed)."),
                                  p(strong("Constraint on the indexes"), "(only for single-indexing) to avoid having two samples or two pools/lanes with the same index(es)."),
@@ -94,8 +95,8 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                                  p(strong("Maximum number of trials"), "can be increased if a solution is difficult to find with the parameters chosen."),
 
                                  h3("About"),
-                                 p("This application has been developed at the Transcriptome & Epigenome Platform of the Biomics pole by Hugo Varet. Feel free to send an e-mail to", 
-                                   a("hugo.varet@pasteur.fr"), "for any suggestion or bug report."),
+                                 p("This application has been developed at the Biomics pole of the Institut Pasteur by Hugo Varet and an ", a("Application Note", href="https://doi.org/10.1093/bioinformatics/bty706"), 
+                                   "describing it has been published in 2018 in Bioinformatics. Feel free to send an e-mail to", a("hugo.varet@pasteur.fr"), "for any suggestion or bug report."),
                                  p("Source code and instructions to run it locally are available the", a("GitHub", href="https://github.com/PF2-pasteur-fr/checkMyIndex"), "repository. 
                                    Please note that checkMyIndex is provided without any guarantees as to its accuracy."),
                                  
