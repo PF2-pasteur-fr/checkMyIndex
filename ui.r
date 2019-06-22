@@ -1,21 +1,30 @@
 library(shiny)
+library(shinyjs)
 
-checkMyIndexVersion <- "1.0.0"
-
-shinyUI(fluidPage(theme = "bootstrap.min.css",
+shinyUI(fluidPage(theme = "bootstrap.min.css", shinyjs::useShinyjs(),
 
                   titlePanel(title=div(img(src="dna.png", width=50), strong("Search for a set of compatible indexes for your sequencing experiment")), windowTitle="checkMyIndex"),
                   
                   sidebarLayout(
                     
                     # parameters
-                    sidebarPanel(
-                      fileInput("inputFile", label="Select your tab-delimited file containing the index 1 (i7) ids and sequences", accept="text"),
-                      fileInput("inputFile2", label="Optional index 2 (i5) file for dual-indexing", accept="text"),
-                      selectizeInput("testdata", label="Load test indexes (overwrite those already imported)", 
-                                     choices=c("None"="none",
-                                               "24 indexes 1 (i7)"="simple",
-                                               "6 indexes 1 (i7) and 4 indexes 2 (i5)"="dual")),
+                    sidebarPanel(div(id="allParameters",
+                      
+                      # input indexes
+                      conditionalPanel(condition="!output.testdataProvided", {
+                        fileInput("inputFile", label="Select your tab-delimited file containing the index 1 (i7) ids and sequences", accept="text")
+                      }),
+                      conditionalPanel(condition="!output.testdataProvided", {
+                        fileInput("inputFile2", label="Optional index 2 (i5) file for dual-indexing", accept="text")
+                      }),
+                      conditionalPanel(condition="!output.inputFileProvided & !output.inputFile2Provided", {
+                        selectizeInput("testdata", label="Load test indexes",
+                                       choices=c("None"="none",
+                                                 "24 indexes 1 (i7)"="simple",
+                                                 "6 indexes 1 (i7) and 4 indexes 2 (i5)"="dual"))
+                      }),
+                      
+                      # parameters
                       selectizeInput("chemistry", label="Illumina chemistry", 
                                      choices=c("Four-channels (HiSeq & MiSeq)" = 4, 
                                                "Two-channels (NovaSeq, NextSeq & MiniSeq)" = 2,
@@ -28,8 +37,12 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                       conditionalPanel(condition="output.indexUploaded & !output.indexUploaded2", {checkboxInput("completeLane", "Directly look for a solution with the desired multiplexing rate", value=FALSE)}),
                       conditionalPanel(condition="output.indexUploaded & !output.indexUploaded2", {checkboxInput("selectCompIndexes", "Select compatible indexes before looking for a solution", value=FALSE)}),
                       selectInput("nbMaxTrials", label="Maximum number of trials to find a solution", choices=10^(1:4)),
-                      actionButton("go", label="Search for a solution")
-                    ),
+                      
+                      # go and reset buttons
+                      actionButton("go", label="Search for a solution"),
+                      actionButton("reset", "Reset parameters")
+                      
+                    )),
                     
                     # output
                     mainPanel(
@@ -37,6 +50,7 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                       tabsetPanel(id="mainPanel",
                         # 1st panel: input
                         tabPanel("Input indexes",
+                                 value="inputIndexes",
                                  p(textOutput("textIndex")),
                                  dataTableOutput("inputIndex"),
                                  p(textOutput("textIndex2")),
@@ -45,15 +59,23 @@ shinyUI(fluidPage(theme = "bootstrap.min.css",
                         # 2nd panel: results
                         tabPanel("Proposed flowcell design",
                                  value="proposedSolution",
-                                 p(textOutput("textDescribingSolution")),
-                                 dataTableOutput("solution"),
-                                 br(""),
-                                 uiOutput("downloadButton")),
+                                 shinyjs::hidden(div(
+                                   id="proposedSolution",
+                                   p(textOutput("textDescribingSolution")),
+                                   dataTableOutput("solution"),
+                                   br(""),
+                                   uiOutput("downloadButton")
+                                 ))
+                                 ),
                         
                         # 3rd panel: plot results
                         tabPanel("Visualization of the design",
-                                 p(textOutput("textDescribingHeatmap")),
-                                 uiOutput("heatmapindex2")),
+                                 shinyjs::hidden(div(
+                                   id="visualization",
+                                   p(textOutput("textDescribingHeatmap")),
+                                   uiOutput("heatmapindex2")
+                                 ))
+                                 ),
                         
                         # 4th panel: help
                         tabPanel("Help",

@@ -18,7 +18,7 @@ Click [here](https://checkmyindex.pasteur.fr/) to use the shiny interface of *ch
 
 ### Locally
 
-One can use the application locally running the two following lines in R:
+If both *shiny* and *shinyjs* R packages are already installed, one can use the application locally running the two following lines in R:
 
 `library(shiny)`
 
@@ -52,7 +52,7 @@ The help page of the script can be displayed running the following command:
 
 Here is the list of the R packages needed to run *checkMyIndex*:
 
-* *shiny* to run the shiny application locally
+* *shiny* and *shinyjs* to run the shiny application locally
 
 * *optparse* to interpret the input parameters when using the Rscript command line
 
@@ -63,6 +63,10 @@ One can install each of these packages running `install.packages(packageName)` i
 ## Illumina chemistry
 
 Illumina has developed three types of chemistry: the four-channels for the HiSeq and MiSeq sequencing devices, the two-channels for the NovaSeq, NextSeq and MiniSeq devices and the one-channel for the iSeq 100 device. With the four-channel chemistry, a red laser detects A/C bases and a green laser detects G/T bases and the indexes are compatible if there is at least one red light and one green light at each position. With the two-channel chemistry, G bases have no color, A bases are orange, C bases are red and T bases are green and indexes are compatible if there is at least one color at each position. Note that indexes starting with GG are not compatible with the two-channel chemistry. With the one-channel chemistry, compatibility cannot be defined with colors and indexes are compatible if there is at least one A or C or T base at each position. Please refer to the Illumina documentation for more detailed information on the different chemistries.
+
+## News
+
+* Version 1.0.1: update of the user interface with *shinyjs*
 
 ## About checkMyIndex
 

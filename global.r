@@ -1,6 +1,8 @@
 # this file contains the functions used in both the "checkMyIndex" script and shiny application
 library(parallel)
 
+checkMyIndexVersion <- "1.0.1"
+
 readIndexesFile <- function(file){
   index <- tryCatch({read.table(file, header=FALSE, sep="\t", stringsAsFactors=FALSE, col.names=c("id","sequence"))},
                     error = function(e) stop("An error occured when loading the input file, please check its structure."))

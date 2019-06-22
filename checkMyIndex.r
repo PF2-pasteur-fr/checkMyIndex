@@ -1,4 +1,4 @@
-#! /usr/bin/Rscript
+#! /usr/local/bin/Rscript
 
 # Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 8 -m 2
 # Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 6 -m 2 -u index
@@ -75,7 +75,14 @@ option_list <- list(
   make_option(c("-b","--nbMaxTrials"),
               default=10,
               dest="nbMaxTrials", 
-              help="maximum number of iterations to find a solution [default: %default]")
+              help="maximum number of iterations to find a solution [default: %default]"),
+  
+  make_option(c("-v","--version"),
+              type="logical",
+              default=FALSE,
+              action="store_true",
+              dest="version",
+              help="overwrite the other parameters and only display the checkMyIndex version [default: %default]")
 )
 
 description <- c("Search for a set of compatible indexes for your sequencing experiment.
@@ -98,6 +105,18 @@ parser <- OptionParser(usage="usage: %prog [options]",
                        epilogue="For comments, suggestions, bug reports etc... please contact Hugo Varet <hugo.varet@pasteur.fr>")
 opt <- parse_args(parser, args=commandArgs(trailingOnly=TRUE), positional_arguments=0)$options
 
+# locate script path to source global.r
+ca <- commandArgs()
+ca.file <- ca[grepl("--file=", ca)]
+if (length(ca.file) != 1) stop("\nCan't determine the path of the R scripts.")
+ca.file <- sub("--file=", "", ca.file)
+path.global.r <- sub(basename(ca.file), "global.r", ca.file)
+if (!file.exists(path.global.r)) stop("\nBoth checkMyIndex.r and global.r files must be in the same directory.")
+source(path.global.r)
+
+# print checkMyIndex version and quit R
+if (opt$version){cat("checkMyIndex version:", checkMyIndexVersion, "\n"); quit(save="no")}
+
 # check presence of the mandatory arguments
 if (is.null(opt$inputFile) | is.null(opt$nbSamples) | is.null(opt$multiplexingRate) | is.null(opt$chemistry)){
   stop("\nAll the mandatory arguments have not been provided. Run 'Rscript checkMyIndex.r --help' for more details.")
@@ -113,15 +132,6 @@ outputFile <- opt$outputFile
 completeLane <- as.logical(opt$completeLane)
 selectCompIndexes <- as.logical(opt$selectCompIndexes)
 nbMaxTrials <- as.numeric(opt$nbMaxTrials)
-
-# locate script path to source global.r
-ca <- commandArgs()
-ca.file <- ca[grepl("--file=", ca)]
-if (length(ca.file) != 1) stop("\nCan't determine the path of the R scripts.")
-ca.file <- sub("--file=", "", ca.file)
-path.global.r <- sub(basename(ca.file), "global.r", ca.file)
-if (!file.exists(path.global.r)) stop("\nBoth checkMyIndex.r and global.r files must be in the same directory.")
-source(path.global.r)
 
 nbLanes <- nbSamples/multiplexingRate
 if (file.exists(inputFile)){

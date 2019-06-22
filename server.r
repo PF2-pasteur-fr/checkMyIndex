@@ -5,12 +5,57 @@ options(shiny.sanitize.errors = FALSE,   # to display informative error messages
 
 shinyServer(function(input, output, session) {
   
+  # reset input parameters when pressing the reset button
+  observeEvent(input$reset, {
+    shinyjs::reset("allParameters")
+    # previous inputFile disapears but is still sent to the server
+    # known issue: https://github.com/daattali/shinyjs/issues/104
+    rv$inputFile <- NULL
+    rv$inputFile2 <- NULL
+    rv$testdata <- "none"
+  })
+  # automatically go to the first tab when pressing "reset" or providing any input file
+  observeEvent(c(input$inputFile, input$inputFile2, input$testdata, input$reset), ignoreInit=TRUE, {
+    updateTabsetPanel(session, "mainPanel", selected = "inputIndexes")
+    shinyjs::hide("proposedSolution")
+    shinyjs::hide("visualization")
+  })
+  # hide solution and heatmap when changing one of these parameters
+  observeEvent(c(input$nbSamples, input$multiplexingRate, input$chemistry), ignoreInit=TRUE, {
+    shinyjs::hide("proposedSolution")
+    shinyjs::hide("visualization")
+  })
+  # piece of code to fix the input file reset problem (trick: pass it into a reactive value)
+  rv <- reactiveValues(inputFile=NULL, inputFile2=NULL, testdata="none")
+  observeEvent(input$inputFile, {rv$inputFile <- input$inputFile})
+  observeEvent(input$inputFile2, {rv$inputFile2 <- input$inputFile2})
+  observeEvent(input$testdata, {rv$testdata <- input$testdata})
+  # get input files
+  fileInput <- reactive({rv$inputFile})
+  fileInput2 <- reactive({rv$inputFile2})
+  testData <- reactive({rv$testdata})
+  # tell UI if inputFiles are present
+  output$inputFileProvided <- reactive({!is.null(rv$inputFile)})
+  output$inputFile2Provided <- reactive({!is.null(rv$inputFile2)})
+  output$testdataProvided <- reactive({rv$testdata != "none"})
+  outputOptions(output, "inputFileProvided", suspendWhenHidden=FALSE)
+  outputOptions(output, "inputFile2Provided", suspendWhenHidden=FALSE)
+  outputOptions(output, "testdataProvided", suspendWhenHidden=FALSE)
+  # automatically go to the proposed solution when pressing "search for a solution" and show solution and heatmap
+  observeEvent(input$go, {
+    if (is.null(tryCatch({displaySolution()}, error = function(e) NULL))){
+      shinyjs::show("proposedSolution")
+      shinyjs::show("visualization")
+    }
+    updateTabsetPanel(session, "mainPanel", selected = "proposedSolution")
+  })
+  
   # list of input indexes 1
   inputIndex <- reactive({
-    if (input$testdata %in% c("simple", "dual")){
-      file <- ifelse(input$testdata=="simple", "www/inputIndexesExample.txt", "www/index24-i7.txt")
+    if (testData() %in% c("simple", "dual")){
+      file <- ifelse(testData() == "simple", "www/inputIndexesExample.txt", "www/index24-i7.txt")
     } else{
-      if (!is.null(input$inputFile)) file <- input$inputFile$datapath else return(NULL)
+      if (!is.null(fileInput())) file <- fileInput()$datapath else return(NULL)
     }
     index <- tryCatch({readIndexesFile(file)}, 
                       error = function(e) stop("An error occured when loading index 1 file, please check its structure."))
@@ -21,7 +66,7 @@ shinyServer(function(input, output, session) {
   output$indexUploaded <- reactive({!is.null(inputIndex())})
   outputOptions(output, "indexUploaded", suspendWhenHidden=FALSE)
   output$inputIndex <- renderDataTable({inputIndex()}, options=list(paging=FALSE, searching=FALSE, info=FALSE))
-  textIndex <- reactive({
+  output$textIndex <- renderText({tryCatch({
     index <- inputIndex()
     if (is.null(index)){
       "No index file loaded yet, use the left panel to select an input file."
@@ -30,18 +75,17 @@ shinyServer(function(input, output, session) {
              to the chosen Illumina chemistry and the minimum number of mismatches with the other indexes.
              Note that the smallest number of mismatches between two indexes of this list is ", min(index$score), ".")
     }
-  })
-  output$textIndex <- renderText({tryCatch({textIndex()}, error = function(e) NULL)})
+  }, error = function(e) NULL)})
   
   # list of input indexes 2
   inputIndex2 <- reactive({
-    if (input$testdata == "simple") return(NULL)
-    if (input$testdata == "dual"){
+    if (testData() == "simple") return(NULL)
+    if (testData() == "dual"){
       file2 <- "www/index24-i5.txt"
     } else{
-      if (!is.null(input$inputFile2)){
+      if (!is.null(fileInput2())){
         if (is.null(inputIndex())) stop("Please load indexes 1 (i7) first.")
-        file2 <- input$inputFile2$datapath
+        file2 <- fileInput2()$datapath
       } else{
         return(NULL)
       }
@@ -55,7 +99,7 @@ shinyServer(function(input, output, session) {
   output$indexUploaded2 <- reactive({!is.null(inputIndex2())})
   outputOptions(output, "indexUploaded2", suspendWhenHidden=FALSE)
   output$inputIndex2 <- renderDataTable({inputIndex2()}, options=list(paging=FALSE, searching=FALSE, info=FALSE))
-  textIndex2 <- reactive({
+  output$textIndex2 <- renderText({tryCatch({
     index2 <- inputIndex2()
     if (is.null(index2)){
       ""
@@ -63,10 +107,8 @@ shinyServer(function(input, output, session) {
       paste0("The table below shows the ", nrow(index2), " indexes 2 (i5) uploaded with the colors corresponding
              to the chosen Illumina chemistry and the minimum number of mismatches with the other indexes.
              Note that the smallest number of mismatches between two indexes of this list is ", min(index2$score), ".")
-      
     }
-  })
-  output$textIndex2 <- renderText({tryCatch({textIndex2()}, error = function(e) NULL)})
+  }, error = function(e) NULL)})
   
   # propose both the possible nb samples and multiplexing rates according to the input list of indexes
   output$nbSamples <- renderUI({
@@ -128,65 +170,65 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  # automatically go to the proposed solution when pressing "search for a solution"
-  observeEvent(input$go, {updateTabsetPanel(session, "mainPanel", selected = "proposedSolution")})
-  
   # text describing the solution
-  textDescribingSolution <- eventReactive(input$go, {
-    if (is.null(input$multiplexingRate) | is.null(inputIndex())){
-      "Please load indexes before pressing the \"Search for a solution\" button."
-    } else{
+  output$textDescribingSolution <- renderText({
+    if (!is.null(tryCatch({displaySolution()}, error = function(e) NULL))){
       paste("Below is a solution for", as.numeric(input$nbSamples)/as.numeric(input$multiplexingRate),
             "pool(s) of", input$multiplexingRate, "samples using the parameters specified. The table contains
-            one row per sample to be sequenced and several columns: pool/lane labels, index ids, index sequences,
-            the corresponding colors according to the chosen Illumina chemistry and a score equal to the minimum
-            number of mismatches with the other indexes of the pool/lane.")
+             one row per sample to be sequenced and several columns: pool/lane labels, index ids, index sequences,
+             the corresponding colors according to the chosen Illumina chemistry and a score equal to the minimum
+             number of mismatches with the other indexes of the pool/lane.")
+    } else{
+       "Please load indexes and then press the \"Search for a solution\" button."
     }
   })
-  output$textDescribingSolution <- renderText({tryCatch({textDescribingSolution()}, error = function(e) NULL)})
   
   # display the solution
   displaySolution <- eventReactive(input$go, {
-    if (is.null(input$multiplexingRate) | is.null(inputIndex())){
+    shinyjs::hide("proposedSolution")
+    shinyjs::hide("visualization")
+    if (is.null(input$multiplexingRate) | (is.null(fileInput()) & is.null(fileInput2()) & testData()=="none")){
       return(NULL)
     } else{
       withProgress({
-        return(findSolution(indexesList = generateList(),
-                            index = inputIndex(),
-                            indexesList2 = generateList2(),
-                            index2 = inputIndex2(),
-                            nbSamples = as.numeric(input$nbSamples),
-                            multiplexingRate = as.numeric(input$multiplexingRate),
-                            unicityConstraint = ifelse(is.null(inputIndex2()), input$unicityConstraint, "none"),
-                            nbMaxTrials = as.numeric(input$nbMaxTrials),
-                            completeLane = input$completeLane,
-                            selectCompIndexes = input$selectCompIndexes,
-                            chemistry = input$chemistry))
+        solution <- findSolution(indexesList = generateList(),
+                                 index = inputIndex(),
+                                 indexesList2 = generateList2(),
+                                 index2 = inputIndex2(),
+                                 nbSamples = as.numeric(input$nbSamples),
+                                 multiplexingRate = as.numeric(input$multiplexingRate),
+                                 unicityConstraint = ifelse(is.null(inputIndex2()), input$unicityConstraint, "none"),
+                                 nbMaxTrials = as.numeric(input$nbMaxTrials),
+                                 completeLane = input$completeLane,
+                                 selectCompIndexes = input$selectCompIndexes,
+                                 chemistry = input$chemistry)
       }, message="R is looking for a solution...", max=0)
-      
+      shinyjs::show("proposedSolution")
+      shinyjs::show("visualization")
+      return(solution)
     }
   })
-  output$solution <- renderDataTable({displaySolution()}, options=list(paging=FALSE, searching=FALSE, info=FALSE))
+  output$solution <- renderDataTable({
+    tryCatch({displaySolution()}, error = function(e) NULL)
+  }, options=list(paging=FALSE, searching=FALSE, info=FALSE))
   
-  # get the number samples of the solution to avoid resizing the heatmap when modifying the input number of samples
-  getNbSamples <- eventReactive(input$go, {nrow(displaySolution())})
-  # text describing the solution
-  textDescribingHeatmap <- eventReactive(input$go, {
-    if (is.null(displaySolution())){
-      ""
-    } else{
+  # text describing the heatmap
+  output$textDescribingHeatmap <- renderText({
+    if (!is.null(tryCatch({displaySolution()}, error = function(e) NULL))){
       paste0("The plot below allows to vizualize the proposed solution. Samples (in rows) are grouped by pool/lane
              and each nucleotide of each index is displayed with a color according to the chosen Illumina chemistry. 
              One can thus quickly check whether each color is used at each position. Note that sample ids (from 1 to ",
-             getNbSamples(), ") are printed on the left while index ids are printed on the right.")
+             as.numeric(input$nbSamples), ") are printed on the left while index ids are printed on the right.")
+    } else{
+      "Please load indexes and then press the \"Search for a solution\" button."
     }
   })
-  output$textDescribingHeatmap <- renderText({textDescribingHeatmap()})
+  
   # plot of the solution
   output$heatmapindex <- renderPlot({heatmapindex(displaySolution())}, res=90)
   output$heatmapindex2 <- renderUI({
     if (!is.null(tryCatch({displaySolution()}, error = function(e) NULL))){
-      plotOutput("heatmapindex", width=900, height=220+20*getNbSamples())
+      plotOutput("heatmapindex", width=900, height=220+20*as.numeric(input$nbSamples))
     }
   })
   
