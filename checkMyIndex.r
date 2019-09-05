@@ -5,6 +5,7 @@
 # Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 12 -m 3 -u lane
 # Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 24 -m 4 -u index
 # Rscript checkMyIndex.r --inputFile7=index24-i7.txt --inputFile5=index24-i5.txt -C 2 -n 24 -m 12
+# Rscript checkMyIndex.r --inputFile7=index96_UDI-i7.txt --inputFile5=index96_UDI-i5.txt -C 2 -n 50 -m 10 --udi
 
 library(optparse)
 
@@ -48,6 +49,14 @@ option_list <- list(
               dest="unicityConstraint",
               help="(only for single-indexing) set to 'lane' to use each combination of compatible indexes only once or
               'index' to use each index only once. Note that it is automatically set to 'none' in case of dual-indexing [default: %default]"),
+  
+  make_option(c("--udi"),
+              type="logical",
+              default=FALSE,
+              action="store_true",
+              dest="i7i5pairing",
+              help="(only for dual-indexing) to specify that i7 and i5 indexes are paired in the context of the Illumina
+              unique dual-indexes (UDI) [default: %default]"),
   
   make_option(c("-o","--outputFile"),
               type="character",
@@ -105,6 +114,9 @@ parser <- OptionParser(usage="usage: %prog [options]",
                        epilogue="For comments, suggestions, bug reports etc... please contact Hugo Varet <hugo.varet@pasteur.fr>")
 opt <- parse_args(parser, args=commandArgs(trailingOnly=TRUE), positional_arguments=0)$options
 
+# output width
+options(width=100)
+
 # locate script path to source global.r
 ca <- commandArgs()
 ca.file <- ca[grepl("--file=", ca)]
@@ -128,6 +140,7 @@ multiplexingRate <- as.numeric(opt$multiplexingRate)
 nbSamples <- as.numeric(opt$nbSamples)
 chemistry <- opt$chemistry
 unicityConstraint <- opt$unicityConstraint
+i7i5pairing <- as.logical(opt$i7i5pairing)
 outputFile <- opt$outputFile
 completeLane <- as.logical(opt$completeLane)
 selectCompIndexes <- as.logical(opt$selectCompIndexes)
@@ -168,6 +181,8 @@ if (!I(unicityConstraint %in% c("none", "lane", "index"))) stop("\nUnicity const
 if (!I(completeLane %in% c(TRUE, FALSE))) stop("\ncomplete parameter must be TRUE or FALSE.")
 if (!I(selectCompIndexes %in% c(TRUE, FALSE))) stop("\nselectCompIndexes parameter must be TRUE or FALSE.")
 if (is.na(nbMaxTrials) || nbMaxTrials <= 0) stop("\nNumber of trials must be an integer greater than 1.")
+if (!I(i7i5pairing %in% c(TRUE, FALSE))) stop("\nudi parameter must be TRUE or FALSE.")
+if (i7i5pairing & nrow(index) != nrow(index2)) stop("\nCant't use --udi option with different number of i7 and i5 indexes")
 
 cat("--------------- Parameters ---------------\n")
 cat("Input file i7 (indexes 1): ", inputFile, " (", nrow(index), " indexes)\n", sep="")
@@ -186,24 +201,45 @@ cat("Constraint:", ifelse(unicityConstraint=="none","none",
 cat("Directly look for complete pools/lanes:", completeLane, "\n")
 cat("Select compatible indexes before looking for a solution:", selectCompIndexes, "\n")
 cat("Maximum number of iterations to find a solution:", nbMaxTrials, "\n")
+cat("i7 and i5 indexes pairing (UDI):", i7i5pairing, "\n")
 cat("Output file:", outputFile, "\n")
 cat("------------------------------------------\n")
 
 # generate the list of indexes
-indexesList <- generateListOfIndexesCombinations(index = index,
-                                                 nbSamplesPerLane = multiplexingRate,
-                                                 completeLane = completeLane,
-                                                 selectCompIndexes = selectCompIndexes,
-                                                 chemistry = chemistry)
-
-if (!is.null(index2)){
-  indexesList2 <- generateListOfIndexesCombinations(index = index2,
+if (is.null(index2)){
+  # single-indexing
+  indexesList <- generateListOfIndexesCombinations(index = index,
                                                    nbSamplesPerLane = multiplexingRate,
                                                    completeLane = completeLane,
                                                    selectCompIndexes = selectCompIndexes,
                                                    chemistry = chemistry)
-} else{
   indexesList2 <- NULL
+} else{
+  # dual-indexing
+  if (i7i5pairing){
+    # come back to a kind of single-indexing
+    names(index2) <- paste0(names(index2), "2")
+    index <- cbind(index, index2)
+    indexesList <- generateListOfIndexesCombinations(index = index,
+                                                     nbSamplesPerLane = multiplexingRate,
+                                                     completeLane = completeLane,
+                                                     selectCompIndexes = selectCompIndexes,
+                                                     chemistry = chemistry)
+    index2 <- NULL
+    indexesList2 <- NULL
+  } else{
+    # classic dual-indexing
+    indexesList <- generateListOfIndexesCombinations(index = index,
+                                                     nbSamplesPerLane = multiplexingRate,
+                                                     completeLane = completeLane,
+                                                     selectCompIndexes = selectCompIndexes,
+                                                     chemistry = chemistry)
+    indexesList2 <- generateListOfIndexesCombinations(index = index2,
+                                                      nbSamplesPerLane = multiplexingRate,
+                                                      completeLane = completeLane,
+                                                      selectCompIndexes = selectCompIndexes,
+                                                      chemistry = chemistry)
+  }
 }
 
 cat("Let's try to find a solution for", nbLanes, "pool(s) of", multiplexingRate, "samples using the specified parameters:\n\n")
@@ -217,7 +253,8 @@ print(solution <- findSolution(indexesList = indexesList,
                                nbMaxTrials = nbMaxTrials,
                                completeLane = completeLane,
                                selectCompIndexes = selectCompIndexes,
-                               chemistry = chemistry), row.names=FALSE)
+                               chemistry = chemistry,
+                               i7i5pairing = i7i5pairing), row.names=FALSE)
 
 if (!is.null(outputFile)){
   write.table(solution, outputFile, col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)
