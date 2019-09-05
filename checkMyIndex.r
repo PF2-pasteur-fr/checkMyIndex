@@ -5,7 +5,7 @@
 # Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 12 -m 3 -u lane
 # Rscript checkMyIndex.r --inputFile7=inputIndexesExample.txt -C 4 -n 24 -m 4 -u index
 # Rscript checkMyIndex.r --inputFile7=index24-i7.txt --inputFile5=index24-i5.txt -C 2 -n 24 -m 12
-# Rscript checkMyIndex.r --inputFile7=index96_UDI-i7.txt --inputFile5=index96_UDI-i5.txt -C 2 -n 50 -m 10 --udi
+# Rscript checkMyIndex.r --inputFile7=index96_UDI-i7.txt --inputFile5=index96_UDI-i5.txt -C 2 -n 25 -m 5 --udi
 
 library(optparse)
 
@@ -138,7 +138,7 @@ inputFile <- opt$inputFile
 inputFile2 <- opt$inputFile2
 multiplexingRate <- as.numeric(opt$multiplexingRate)
 nbSamples <- as.numeric(opt$nbSamples)
-chemistry <- opt$chemistry
+chemistry <- as.character(opt$chemistry)
 unicityConstraint <- opt$unicityConstraint
 i7i5pairing <- as.logical(opt$i7i5pairing)
 outputFile <- opt$outputFile
@@ -218,6 +218,13 @@ if (is.null(index2)){
   # dual-indexing
   if (i7i5pairing){
     # come back to a kind of single-indexing
+    if (chemistry == "2"){
+      mask <- which(substr(index$sequence, 1, 2) == "GG" | substr(index2$sequence, 1, 2) == "GG")
+      if (length(mask) > 0){
+        index <- index[-mask,]
+        index2 <- index2[-mask,]
+      }
+    }
     names(index2) <- paste0(names(index2), "2")
     index <- cbind(index, index2)
     indexesList <- generateListOfIndexesCombinations(index = index,

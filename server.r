@@ -200,9 +200,16 @@ shinyServer(function(input, output, session) {
   generateListPairedIndexes <- reactive({
     index <- inputIndex()
     index2 <- inputIndex2()
-    if (is.null(index) | is.null(index2)){
+    if (is.null(index) & is.null(index2)){
       return(NULL)
     } else{
+      if (input$chemistry == "2"){
+        mask <- which(substr(index$sequence, 1, 2) == "GG" | substr(index2$sequence, 1, 2) == "GG")
+        if (length(mask) > 0){
+          index <- index[-mask,]
+          index2 <- index2[-mask,]
+        }
+      }
       names(index2) <- paste0(names(index2), "2")
       index <- cbind(index[, -4], index2[, -4])
       return(generateListOfIndexesCombinations(index = index,
@@ -242,6 +249,13 @@ shinyServer(function(input, output, session) {
         } else{
           if (input$i7i5pairing){
             # come back to a kind of single-indexing
+            if (input$chemistry == "2"){
+              mask <- which(substr(index$sequence, 1, 2) == "GG" | substr(index2$sequence, 1, 2) == "GG")
+              if (length(mask) > 0){
+                index <- index[-mask,]
+                index2 <- index2[-mask,]
+              }
+            }
             names(index2) <- paste0(names(index2), "2")
             index <- cbind(index, index2)
             indexesList <- generateListPairedIndexes()
