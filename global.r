@@ -1,7 +1,7 @@
 # this file contains the functions used in both the "checkMyIndex" script and shiny application
 library(parallel)
 
-checkMyIndexVersion <- "1.0.1"
+checkMyIndexVersion <- "1.0.2"
 
 readIndexesFile <- function(file){
   index <- tryCatch({read.table(file, header=FALSE, sep="\t", stringsAsFactors=FALSE, col.names=c("id","sequence"))},
@@ -64,10 +64,10 @@ distNindexes <- function(sequences){
 # the score of each index is the minimum number of mismatches with the others
 scores <- function(sequences) apply(distNindexes(sequences), 2, min)
 
-areIndexesCompatible <- function(index, chemistry){
+areIndexesCompatible <- function(index, chemistry, column="color"){
   # return TRUE if the input indexes are compatible (i.e. can be used within the same pool/lane)
   if (nrow(index)==1) return(TRUE)
-  matColors <- do.call("rbind", strsplit(index$color, ""))
+  matColors <- do.call("rbind", strsplit(index[, column], ""))
   if (chemistry == "4"){
     sumRed <- apply(matColors, 2, function(x) sum(x=="R"))
     sumGreen <- nrow(matColors) - sumRed
@@ -98,7 +98,8 @@ generateListOfIndexesCombinations <- function(index, nbSamplesPerLane, completeL
 }
 
 searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL,
-                              nbLanes, multiplexingRate, unicityConstraint, chemistry){
+                              nbLanes, multiplexingRate, unicityConstraint, chemistry,
+                              i7i5pairing){
   # goal: look for a solution (i.e. a combination of combination of indexes) such that
   #  - each index is used only once if required (unicityConstraint = index)
   #  - each combination of indexes is used only once if required (unicityConstraint = lane)
@@ -108,7 +109,7 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
   # this function can return NULL if no solution is found (need to re-run in that case)
   inputNbSamplesPerLane <- nrow(indexesList[[1]])
   compatibleCombinations <- vector(mode="list", length=nbLanes)
-  # single-indexing
+  # single-indexing or paired dual-indexing
   if (is.null(index2) | is.null(indexesList2)){
     k <- 1
     while (k <= nbLanes){
@@ -117,14 +118,23 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
         return(NULL)
       } else{
         i <- sample(1:length(indexesList), 1, FALSE)
-        if (areIndexesCompatible(indexesList[[i]], chemistry)){
-          compatibleCombinations[[k]] <- indexesList[[i]]
-          # remove either the combination used or all the combinations for which an index has already been selected
-          if (unicityConstraint=="index") indexesList <- indexesList[!sapply(indexesList, function(tab) any(tab$id %in% indexesList[[i]]$id))]
-          if (unicityConstraint=="lane") indexesList <- indexesList[-i]
-          k <- k+1
+        if (!i7i5pairing){
+          if (areIndexesCompatible(indexesList[[i]], chemistry, "color")){
+            compatibleCombinations[[k]] <- indexesList[[i]]
+            # remove either the combination used or all the combinations for which an index has already been selected
+            if (unicityConstraint=="index") indexesList <- indexesList[!sapply(indexesList, function(tab) any(tab$id %in% indexesList[[i]]$id))]
+            if (unicityConstraint=="lane") indexesList <- indexesList[-i]
+            k <- k+1
+          } else{
+            indexesList <- indexesList[-i]
+          }
         } else{
-          indexesList <- indexesList[-i]
+          if (areIndexesCompatible(indexesList[[i]], chemistry, "color") & areIndexesCompatible(indexesList[[i]], chemistry, "color2")){
+            compatibleCombinations[[k]] <- indexesList[[i]]
+            k <- k+1
+          } else{
+            indexesList <- indexesList[-i]
+          }
         }
       }
     }
@@ -133,15 +143,30 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
                            do.call("rbind", compatibleCombinations))
     if (multiplexingRate > inputNbSamplesPerLane){
       # only a partial solution has been found, need to complete it
-      if (chemistry == "2") index <- index[!sapply(index$sequence, substr, 1, 2) == "GG",]
+      if (chemistry == "2"){
+        index <- index[!(sapply(index$sequence, substr, 1, 2) == "GG"),]
+        if (i7i5pairing) index <- index[!(sapply(index$sequence2, substr, 1, 2) == "GG"),]
+      }
       solution <- completeSolution(partialSolution = solution,
                                    index = index,
                                    multiplexingRate = multiplexingRate,
                                    unicityConstraint = unicityConstraint)
     }
-    solution$score <- unlist(tapply(solution$sequence, solution$pool, scores))
+    if (!is.null(solution)){
+      if (i7i5pairing){
+        names(solution)[3:5] <- paste0(names(solution)[3:5], "1")
+        solution$score1 <- unlist(tapply(solution$sequence1, solution$pool, scores))
+        solution$score2 <- unlist(tapply(solution$sequence2, solution$pool, scores))
+        # re-order columns
+        solution <- solution[, c("sample", "pool", 
+                                 "id1", "sequence1", "color1", "score1", 
+                                 "id2", "sequence2", "color2", "score2")]
+      } else{
+        solution$score <- unlist(tapply(solution$sequence, solution$pool, scores))
+      }
+    }
     return(solution)
-  # dual-indexing
+  # dual-indexing without pairing
   } else {
     # reminder: unicityConstraint has been set to "none" to simplify the algorithm
     # and also because it is not so important with dual-indexing
@@ -156,14 +181,12 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
         i <- sample(1:length(indexesList), 1, FALSE)
         if (areIndexesCompatible(indexesList[[i]], chemistry)){
           compatibleCombinations[[k]] <- indexesList[[i]]
-          for (i2 in sample(1:length(indexesList2), 1, FALSE)){
-            if (areIndexesCompatible(indexesList2[[i2]], chemistry)){
-              compatibleCombinations2[[k]] <- indexesList2[[i2]]
-              k <- k+1
-              break
-            } else{
-              indexesList2 <- indexesList2[-i2]
-            }
+          i2 <- ifelse(i7i5pairing, i, sample(1:length(indexesList2), 1, FALSE))
+          if (areIndexesCompatible(indexesList2[[i2]], chemistry)){
+            compatibleCombinations2[[k]] <- indexesList2[[i2]]
+            k <- k+1
+          } else{
+            indexesList2 <- indexesList2[-i2]
           }
         } else{
           indexesList <- indexesList[-i]
@@ -200,7 +223,7 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
     solution.merged <- merge(solution, solution2, by.x="pool1", by.y="pool2")
     solution <- list()
     for (pool in unique(solution.merged$pool1)){
-      # look for the most diverse couple of indexes can beslightly difficult
+      # look for the most diverse couple of indexes can be slightly difficult
       # we thus encapsulate it into a while() loop
       solution.pool.OK <- FALSE
       while (!solution.pool.OK){
@@ -252,6 +275,7 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
 
 completeSolution <- function(partialSolution, index, multiplexingRate, unicityConstraint){
   nbSamplesToAdd <- multiplexingRate - nrow(partialSolution)/max(partialSolution$pool) # to each lane
+  partialSolution$sample <- NULL
   for (l in unique(partialSolution$pool)){
     if (unicityConstraint == "index"){
       # remove all the indexes already used
@@ -263,16 +287,17 @@ completeSolution <- function(partialSolution, index, multiplexingRate, unicityCo
     if (nbSamplesToAdd > nrow(index.remaining)) return(NULL) # not enough remaining indexes to complete the solution
     indexesToAdd <- index.remaining[sample(1:nrow(index.remaining), nbSamplesToAdd, FALSE),]
     indexesToAdd$pool <- l
-    partialSolution <- rbind.data.frame(partialSolution[, c("pool","id","sequence","color")],
-                                        indexesToAdd[, c("pool","id","sequence","color")])
+    partialSolution <- rbind.data.frame(partialSolution, 
+                                        indexesToAdd[, c(ncol(indexesToAdd), 1:(ncol(indexesToAdd)-1))])
   }
-  finalSolution <- data.frame(sample=1:nrow(partialSolution), partialSolution[order(partialSolution$pool, partialSolution$id),])
+  finalSolution <- data.frame(sample=1:nrow(partialSolution), 
+                              partialSolution[order(partialSolution$pool, partialSolution$id),])
   return(finalSolution)
 }
 
 findSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL,
                          nbSamples, multiplexingRate, unicityConstraint, nbMaxTrials, 
-                         completeLane, selectCompIndexes, chemistry){
+                         completeLane, selectCompIndexes, chemistry, i7i5pairing){
   # this function run searchOneSolution() nbMaxTrials times until finding a solution based on the parameters defined
   if (!unicityConstraint %in% c("none", "index", "lane")) stop("unicityConstraint parameter must be equal to 'none', 'lane' or 'index'.")
   if (unicityConstraint=="index" & nbSamples > nrow(index)) stop("More samples than available indexes: cannot use each index only once.")
@@ -291,10 +316,11 @@ findSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL,
                                   nbLanes = nbLanes,
                                   multiplexingRate = multiplexingRate,
                                   unicityConstraint = unicityConstraint,
-                                  chemistry = chemistry)
+                                  chemistry = chemistry,
+                                  i7i5pairing = i7i5pairing)
     if (!is.null(solution)){
       # check solution only for single-indexing as dual-indexing has no constraint
-      if (is.null(indexesList2) & is.null(index2)){
+      if (is.null(indexesList2) & is.null(index2) & !i7i5pairing){
         checkProposedSolution(solution = solution, unicityConstraint = unicityConstraint, chemistry = chemistry)
       } else{
         checkProposedSolution2(solution = solution, chemistry = chemistry)

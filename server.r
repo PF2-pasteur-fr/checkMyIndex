@@ -110,6 +110,33 @@ shinyServer(function(input, output, session) {
     }
   }, error = function(e) NULL)})
   
+  # i7 and i5 pairing
+  output$i7i5sameLength <- reactive({
+    !is.null(inputIndex()) & !is.null(inputIndex2()) && nrow(inputIndex())==nrow(inputIndex2())
+  })
+  outputOptions(output, "i7i5sameLength", suspendWhenHidden=FALSE)
+  output$i7i5pairing <- renderUI({checkboxInput("i7i5pairing", "i7 and i5 indexes pairing (Illumina UDIs)", value=FALSE)})
+  output$textPairingTable <- renderText({tryCatch({
+    index <- inputIndex()
+    index2 <- inputIndex2()
+    if (is.null(index) | is.null(index2) || !input$i7i5pairing){
+      ""
+    } else{
+      "The table below shows the pairing between the i7 and i5 input indexes."
+    }
+  }, error = function(e) NULL)})
+  output$pairingTable <- renderDataTable({
+    index <- inputIndex()
+    index2 <- inputIndex2()
+    if (is.null(index) | is.null(index2) || !input$i7i5pairing){
+      return(NULL)
+    } else{
+      out <- cbind(index[, 1:2], index2[, 1:2])
+      names(out) <- paste(names(out), c("i7", "i7", "i5", "i5"), sep=".")
+      return(out)
+    }
+  }, options=list(paging=FALSE, searching=FALSE, info=FALSE))
+  
   # propose both the possible nb samples and multiplexing rates according to the input list of indexes
   output$nbSamples <- renderUI({
     index <- tryCatch({inputIndex()}, error = function(e) NULL)
@@ -119,11 +146,18 @@ shinyServer(function(input, output, session) {
       nr <- ifelse(input$chemistry == "2", nrow(index[substr(index$sequence, 1, 2) != "GG",]), nrow(index))
       index2 <- tryCatch({inputIndex2()}, error = function(e) NULL)
       if (is.null(index2)){
-        nr2 <- 1
+        nbSamples <- nr
       } else{
-        nr2 <- ifelse(input$chemistry == "2", nrow(index2[substr(index2$sequence, 1, 2) != "GG",]), nrow(index2))
+        if (input$i7i5pairing){
+          nbSamples <- ifelse(input$chemistry == "2",
+                              sum(substr(index$sequence, 1, 2) != "GG" & substr(index2$sequence, 1, 2) != "GG"),
+                              nr)
+        } else{
+          nr2 <- ifelse(input$chemistry == "2", nrow(index2[substr(index2$sequence, 1, 2) != "GG",]), nrow(index2))
+          nbSamples <- nr*nr2
+        }
       }
-      numericInput("nbSamples", label="Total number of samples in the experiment", value=nr*nr2, min=2, step=1)
+      numericInput("nbSamples", label="Total number of samples in the experiment", value=nbSamples, min=2, step=1)
     }
   })
   output$multiplexingRate <- renderUI({
@@ -151,7 +185,8 @@ shinyServer(function(input, output, session) {
   
   # generate list(s) of indexes
   generateList <- reactive({
-    return(generateListOfIndexesCombinations(index = inputIndex(),
+    index <- inputIndex()
+    return(generateListOfIndexesCombinations(index = index[, -4],
                                              nbSamplesPerLane = as.numeric(input$multiplexingRate),
                                              completeLane = input$completeLane,
                                              selectCompIndexes = input$selectCompIndexes,
@@ -162,7 +197,29 @@ shinyServer(function(input, output, session) {
     if (is.null(index2)){
       return(NULL)
     } else{
-      return(generateListOfIndexesCombinations(index = index2,
+      return(generateListOfIndexesCombinations(index = index2[, -4],
+                                               nbSamplesPerLane = as.numeric(input$multiplexingRate),
+                                               completeLane = input$completeLane,
+                                               selectCompIndexes = input$selectCompIndexes,
+                                               chemistry = input$chemistry))
+    }
+  })
+  generateListPairedIndexes <- reactive({
+    index <- inputIndex()
+    index2 <- inputIndex2()
+    if (is.null(index) & is.null(index2)){
+      return(NULL)
+    } else{
+      if (input$chemistry == "2"){
+        mask <- which(substr(index$sequence, 1, 2) == "GG" | substr(index2$sequence, 1, 2) == "GG")
+        if (length(mask) > 0){
+          index <- index[-mask,]
+          index2 <- index2[-mask,]
+        }
+      }
+      names(index2) <- paste0(names(index2), "2")
+      index <- cbind(index[, -4], index2[, -4])
+      return(generateListOfIndexesCombinations(index = index,
                                                nbSamplesPerLane = as.numeric(input$multiplexingRate),
                                                completeLane = input$completeLane,
                                                selectCompIndexes = input$selectCompIndexes,
@@ -191,17 +248,43 @@ shinyServer(function(input, output, session) {
       return(NULL)
     } else{
       withProgress({
-        solution <- findSolution(indexesList = generateList(),
-                                 index = inputIndex(),
-                                 indexesList2 = generateList2(),
-                                 index2 = inputIndex2(),
+        index <- inputIndex()[, -4]
+        index2 <- inputIndex2()[, -4]
+        if (is.null(index2)){
+          indexesList <- generateList()
+          indexesList2 <- NULL
+        } else{
+          if (input$i7i5pairing){
+            # come back to a kind of single-indexing
+            if (input$chemistry == "2"){
+              mask <- which(substr(index$sequence, 1, 2) == "GG" | substr(index2$sequence, 1, 2) == "GG")
+              if (length(mask) > 0){
+                index <- index[-mask,]
+                index2 <- index2[-mask,]
+              }
+            }
+            names(index2) <- paste0(names(index2), "2")
+            index <- cbind(index, index2)
+            indexesList <- generateListPairedIndexes()
+            index2 <- NULL
+            indexesList2 <- NULL
+          } else{
+            indexesList <- generateList()
+            indexesList2 <- generateList2()
+          }
+        }
+        solution <- findSolution(indexesList = indexesList,
+                                 index = index,
+                                 indexesList2 = indexesList2,
+                                 index2 = index2,
                                  nbSamples = as.numeric(input$nbSamples),
                                  multiplexingRate = as.numeric(input$multiplexingRate),
                                  unicityConstraint = ifelse(is.null(inputIndex2()), input$unicityConstraint, "none"),
                                  nbMaxTrials = as.numeric(input$nbMaxTrials),
                                  completeLane = input$completeLane,
                                  selectCompIndexes = input$selectCompIndexes,
-                                 chemistry = input$chemistry)
+                                 chemistry = input$chemistry,
+                                 i7i5pairing = input$i7i5pairing)
       }, message="R is looking for a solution...", max=0)
       shinyjs::show("proposedSolution")
       shinyjs::show("visualization")
