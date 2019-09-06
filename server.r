@@ -145,12 +145,19 @@ shinyServer(function(input, output, session) {
     } else{
       nr <- ifelse(input$chemistry == "2", nrow(index[substr(index$sequence, 1, 2) != "GG",]), nrow(index))
       index2 <- tryCatch({inputIndex2()}, error = function(e) NULL)
-      if (is.null(index2) | input$i7i5pairing){
-        nr2 <- 1
+      if (is.null(index2)){
+        nbSamples <- nr
       } else{
-        nr2 <- ifelse(input$chemistry == "2", nrow(index2[substr(index2$sequence, 1, 2) != "GG",]), nrow(index2))
+        if (input$i7i5pairing){
+          nbSamples <- ifelse(input$chemistry == "2",
+                              sum(substr(index$sequence, 1, 2) != "GG" & substr(index2$sequence, 1, 2) != "GG"),
+                              nr)
+        } else{
+          nr2 <- ifelse(input$chemistry == "2", nrow(index2[substr(index2$sequence, 1, 2) != "GG",]), nrow(index2))
+          nbSamples <- nr*nr2
+        }
       }
-      numericInput("nbSamples", label="Total number of samples in the experiment", value=nr*nr2, min=2, step=1)
+      numericInput("nbSamples", label="Total number of samples in the experiment", value=nbSamples, min=2, step=1)
     }
   })
   output$multiplexingRate <- renderUI({

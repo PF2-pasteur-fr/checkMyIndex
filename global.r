@@ -152,14 +152,18 @@ searchOneSolution <- function(indexesList, index, indexesList2=NULL, index2=NULL
                                    multiplexingRate = multiplexingRate,
                                    unicityConstraint = unicityConstraint)
     }
-    if (i7i5pairing){
-      names(solution)[3:5] <- paste0(names(solution)[3:5], "1")
-      solution$score1 <- unlist(tapply(solution$sequence1, solution$pool, scores))
-      solution$score2 <- unlist(tapply(solution$sequence2, solution$pool, scores))
-      # re-order columns
-      solution <- solution[, c(1:5, 9, 6:8, 10)]
-    } else{
-      solution$score <- unlist(tapply(solution$sequence, solution$pool, scores))
+    if (!is.null(solution)){
+      if (i7i5pairing){
+        names(solution)[3:5] <- paste0(names(solution)[3:5], "1")
+        solution$score1 <- unlist(tapply(solution$sequence1, solution$pool, scores))
+        solution$score2 <- unlist(tapply(solution$sequence2, solution$pool, scores))
+        # re-order columns
+        solution <- solution[, c("sample", "pool", 
+                                 "id1", "sequence1", "color1", "score1", 
+                                 "id2", "sequence2", "color2", "score2")]
+      } else{
+        solution$score <- unlist(tapply(solution$sequence, solution$pool, scores))
+      }
     }
     return(solution)
   # dual-indexing without pairing

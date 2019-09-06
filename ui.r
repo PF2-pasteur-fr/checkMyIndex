@@ -113,7 +113,8 @@ shinyUI(fluidPage(theme = "bootstrap.min.css", shinyjs::useShinyjs(),
                                    chemistries."),
                                  p(strong("Total number of samples"), "in your experiment (can be greater than the number of available indexes)."),
                                  p(strong("Multiplexing rate"), "i.e. number of samples per pool/lane (only divisors of the total number of samples are proposed)."),
-                                 p(strong("i7 and i5 pairing"), "(only for dual-indexing) is proposed if there are as many i5 as i7 indexes to deal with Illumina Unique Dual-Indexes (UDI)."),
+                                 p(strong("i7 and i5 pairing"), "(only for dual-indexing) is proposed if there are as many i5 as i7 indexes to deal with Illumina Unique Dual-Indexes (UDI).
+                                   Note that the pairing is done using the order of the indexes in the input files."),
                                  p(strong("Constraint on the indexes"), "(only for single-indexing) to avoid having two samples or two pools/lanes with the same index(es)."),
                                  p(strong("Directly look for a solution with the desired multiplexing rate"), "(only for single-indexing) instead of looking for a partial solution 
                                            with a few samples per pool/lane and then add some of the remaining indexes to reach the desired multiplexing rate."),

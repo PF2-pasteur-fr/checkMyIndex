@@ -56,7 +56,7 @@ option_list <- list(
               action="store_true",
               dest="i7i5pairing",
               help="(only for dual-indexing) to specify that i7 and i5 indexes are paired in the context of the Illumina
-              unique dual-indexes (UDI) [default: %default]"),
+              unique dual-indexes (UDI). Note that the pairing is done using the order of the indexes in the input files. [default: %default]"),
   
   make_option(c("-o","--outputFile"),
               type="character",
@@ -227,6 +227,7 @@ if (is.null(index2)){
     }
     names(index2) <- paste0(names(index2), "2")
     index <- cbind(index, index2)
+    if (multiplexingRate > nrow(index)) stop("\nMutliplexing rate can't be higher than ", nrow(index), " with these parameters.")
     indexesList <- generateListOfIndexesCombinations(index = index,
                                                      nbSamplesPerLane = multiplexingRate,
                                                      completeLane = completeLane,
